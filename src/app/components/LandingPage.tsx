@@ -12,7 +12,7 @@ import { AuthModal } from "./AuthModal";
 // ─── WE Logo ──────────────────────────────────────────────────────────────────
 
 function WELogo({ className = "h-7 w-auto" }: { className?: string }) {
-  return <img src="/we-logo.svg" alt="WE Bubbles" className={className} />;
+  return <img src="/we-logo-wide.svg" alt="WE Bubbles" className={className} />;
 }
 
 // ─── Status Badge ─────────────────────────────────────────────────────────────
@@ -350,31 +350,8 @@ export function LandingPage() {
     <div className="min-h-screen bg-white flex flex-col">
       {/* ── Header ── */}
       <header className="flex items-center px-6 py-3.5 border-b border-[#E9ECEF] sticky top-0 bg-white/95 backdrop-blur z-20 gap-4">
-        {/* Logo */}
-        <div style={{ display: 'flex', alignItems: 'flex-end', gap: '10px' }}>
-          <WELogo className="h-8 w-auto" />
-          <span style={{ fontFamily: 'var(--font-display)', fontWeight: 500, fontSize: '16px', color: '#495057', lineHeight: 1, paddingBottom: '2px' }}>
-            WE Bubbles
-          </span>
-        </div>
-
-        {/* Tabs — left side, next to logo */}
-        <nav className="hidden md:flex items-center gap-1">
-          {tabs.map(tab => (
-            <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-              className="relative px-4 py-1.5 text-[14px] transition-colors"
-              style={{
-                fontFamily: 'var(--font-body)',
-                color: activeTab === tab.id ? '#212529' : '#6C757D',
-                fontWeight: activeTab === tab.id ? 700 : 400,
-              }}>
-              {tab.label}
-              {activeTab === tab.id && (
-                <span className="absolute bottom-0 left-2 right-2 h-0.5 rounded-full" style={{ background: '#00a79d' }} />
-              )}
-            </button>
-          ))}
-        </nav>
+        {/* Logo — stands alone, no adjacent text */}
+        <WELogo className="h-8 w-auto" />
 
         <div className="flex-1" />
 
@@ -423,12 +400,28 @@ export function LandingPage() {
           onSelect={handleOpen}
         />
 
-        {/* Section header */}
+        {/* Section header with inline tabs */}
         <div className="w-full flex flex-col gap-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-[#212529] text-[22px] font-bold" style={{ fontFamily: 'var(--font-display)' }}>
-              {activeTab === 'my' ? 'My Bubbles' : 'All Bubbles'}
-            </h2>
+            <div className="flex items-center gap-1">
+              {tabs.map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className="relative px-4 py-1.5 text-[18px] transition-colors"
+                  style={{
+                    fontFamily: 'var(--font-display)',
+                    color: activeTab === tab.id ? '#212529' : '#ADB5BD',
+                    fontWeight: activeTab === tab.id ? 700 : 500,
+                  }}
+                >
+                  {tab.id === 'all' ? 'All Bubbles' : 'My Bubbles'}
+                  {activeTab === tab.id && (
+                    <span className="absolute bottom-0 left-2 right-2 h-0.5 rounded-full" style={{ background: '#00a79d' }} />
+                  )}
+                </button>
+              ))}
+            </div>
             <span className="text-[#ADB5BD] text-[14px]" style={{ fontFamily: 'var(--font-body)' }}>
               {filtered.length} bubble{filtered.length !== 1 ? 's' : ''}
             </span>
