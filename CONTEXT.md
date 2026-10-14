@@ -49,3 +49,15 @@ A glossary of the domain terms used in this project. Implementation details (tab
 **Definition:** A woman who has joined a Bubble and holds a seat in it. A Member without edit permission can read the syllabus, add resources and record her own progress, but cannot change the syllabus; she is the "viewer" in everyday speech. A Member can be raised to Contributor or Moderator, and one Member is the Founder.
 **Not to be confused with:** A non-member, meaning any other signed-in woman. A non-member has no edit rights over a Bubble at all, but can Fork its syllabus, which makes her the Founder of a new Bubble of her own. Also not to be confused with a woman on the waitlist, who holds no seat yet.
 **Resolved:** 2026-10-14, during the grill session on the backend plan.
+
+## Session
+
+**Definition:** One meeting of a Bubble, about 90 minutes long, numbered S01, S02 and so on. It has a title, a date, a status (done, in progress or locked) and sections of learning content. Learners call it a lesson.
+**Not to be confused with:** A sign-in session, and a Bubble's schedule (the weekly day and time on which its Sessions take place).
+**Resolved:** 2026-10-14, during the grill session on the backend plan.
+
+## Syllabus plan
+
+**Definition:** The outline of a Bubble's Sessions (their titles and goals), made before any Session is built. The agent creates it after researching the topic the Founder asked to learn and sharpening that request, or it is written by hand. The Founder or a Moderator can edit it freely. A Session in the plan stays unbuilt until someone asks for it to be built, and Sessions are built one at a time, so a group can learn Session 1 before asking for Session 2.
+**Not to be confused with:** A built Session, which has its learning content, and the syllabus as a whole, which is the plan together with the Sessions built from it.
+**Resolved:** 2026-10-14, during the grill session on the backend plan.
