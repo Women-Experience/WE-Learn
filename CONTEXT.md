@@ -64,6 +64,12 @@ A glossary of the domain terms used in this project. Implementation details (tab
 
 ## Creator
 
-**Definition:** A woman whom an Admin has authorized to build syllabi for the platform's learners. A Creator may or may not learn in what she builds, and she can build a Bubble and leave it. A woman who wants to run it forks it and becomes the Founder of her own copy, free to edit it, while the Creator's original is preserved.
-**Not to be confused with:** Admin (who governs the platform) and Founder (who runs one Bubble's group). A Creator's work reaches learners through Forks, and the credit to her stays on every copy.
-**Resolved:** 2026-10-14, during the grill session on the backend plan.
+**Definition:** Any woman who builds a syllabus, by hand, with the agent or by importing one. No special permission is needed, and building content is encouraged. A Creator can grow into a Content Lead.
+**Not to be confused with:** Content Lead (a Creator the community team trusts to build at scale) and Founder (who runs one Bubble's group; a Creator who builds a Bubble she then runs is also its Founder).
+**Resolved:** 2026-10-15, during the grill session on the backend plan.
+
+## Content Lead
+
+**Definition:** A Creator whom the community team trusts to build syllabi at scale. Her syllabi carry a visible Content Lead badge as a sign of quality, she is not limited in the number of Bubbles she holds, and she gets a larger allowance of agent runs. She may build a Bubble and leave it, and a woman who wants to run it forks it and becomes the Founder of her own copy while the Content Lead's original is preserved. A Creator becomes a Content Lead by asking the Admin team, or by building several Bubbles that worked well; an Admin grants the role and can withdraw it. The role is platform-wide and carries no power to edit or remove other women's Bubbles.
+**Not to be confused with:** Admin, who governs the platform, and Moderator, who edits one Bubble's syllabus.
+**Resolved:** 2026-10-15, during the grill session on the backend plan.
