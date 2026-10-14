@@ -16,7 +16,7 @@ A glossary of the domain terms used in this project. Implementation details (tab
 
 ## Founder
 
-**Definition:** The woman who created a Bubble, or who created it by Forking another. Each Bubble has exactly one Founder. She holds every Moderator right, and in addition manages the Bubble itself: its members, waitlist and seats, closing or deleting it, and handing the Founder role to another Member. No one but an Admin can remove her from the role; otherwise she leaves it only by handing it to another Member.
+**Definition:** The woman who created a Bubble, or who created it by Forking another. Each Bubble has exactly one Founder. The Founder chooses whether she also takes a seat and learns in the Bubble; a Founder who only builds or facilitates holds no seat, so seats stay for learners. She holds every Moderator right, and in addition manages the Bubble itself: its members, waitlist and seats, closing or deleting it, and handing the Founder role to another Member. No one but an Admin can remove her from the role; otherwise she leaves it only by handing it to another Member.
 **Not to be confused with:** Moderator, who edits the syllabus but does not manage the Bubble itself. Also not to be confused with Admin, whose authority is platform-wide.
 **Resolved:** 2026-10-14, during the grill session on the backend plan.
 
