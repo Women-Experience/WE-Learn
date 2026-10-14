@@ -10,7 +10,7 @@ A glossary of the domain terms used in this project. Implementation details (tab
 
 ## Fork
 
-**Definition:** Opening a new Bubble from an existing Bubble's syllabus. The sessions and sections are copied into the new Bubble as an independent copy, and the new Bubble remembers which Bubble it came from. The woman who forks becomes the Founder of the new Bubble and can change her copy freely without affecting the original. Forking an existing syllabus is the encouraged path; building a syllabus from scratch is the secondary option. A forked Bubble always shows a credit to the Bubble it came from, which cannot be removed.
+**Definition:** Opening a new Bubble from an existing Bubble's syllabus. The sessions and sections are copied into the new Bubble as an independent copy, and the new Bubble remembers which Bubble it came from. The woman who forks becomes the Founder of the new Bubble and can change her copy freely without affecting the original. Forking an existing syllabus is the encouraged path; building a syllabus from scratch is the secondary option. A forked Bubble always shows a credit to the Bubble it came from, which cannot be removed. When a woman starts creating a Bubble, existing syllabi on her topic are offered to her first; the agent's market research runs only if none fit or she chooses not to use one.
 **Not to be confused with:** Joining a Bubble (becoming a member of an existing group) and a suggested change (a proposal sent to a syllabus owner, not yet part of this model).
 **Resolved:** 2026-10-14, during the grill session on the backend plan.
 
