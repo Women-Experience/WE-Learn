@@ -4,7 +4,7 @@ A glossary of the domain terms used in this project. Implementation details (tab
 
 ## Bubble
 
-**Definition:** A learning group of 4 to 8 women around a shared professional topic. A Bubble owns its own syllabus (sessions and sections), its members, its waitlist and its resources, and has one Founder.
+**Definition:** A small learning group of women around a shared professional topic. The Founder sets the maximum number of seats. Four members is a recommendation, not a requirement, so a Bubble can start learning with fewer. A Bubble owns its own syllabus (sessions and sections), its members, its waitlist and its resources, and has one Founder.
 **Not to be confused with:** A "course". There is no separate course object. The syllabus lives inside the Bubble and is the Bubble's content.
 **Resolved:** 2026-10-14, during the grill session on the backend plan.
 
