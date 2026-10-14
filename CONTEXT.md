@@ -61,3 +61,9 @@ A glossary of the domain terms used in this project. Implementation details (tab
 **Definition:** The outline of a Bubble's Sessions (their titles and goals), made before any Session is built. The agent creates it after researching the topic the Founder asked to learn and sharpening that request, or it is written by hand. The Founder or a Moderator can edit it freely. A Session in the plan stays unbuilt until someone asks for it to be built, and Sessions are built one at a time, so a group can learn Session 1 before asking for Session 2.
 **Not to be confused with:** A built Session, which has its learning content, and the syllabus as a whole, which is the plan together with the Sessions built from it.
 **Resolved:** 2026-10-14, during the grill session on the backend plan.
+
+## Creator
+
+**Definition:** A woman whom an Admin has authorized to build syllabi for the platform's learners. A Creator may or may not learn in what she builds, and she can build a Bubble and leave it. A woman who wants to run it forks it and becomes the Founder of her own copy, free to edit it, while the Creator's original is preserved.
+**Not to be confused with:** Admin (who governs the platform) and Founder (who runs one Bubble's group). A Creator's work reaches learners through Forks, and the credit to her stays on every copy.
+**Resolved:** 2026-10-14, during the grill session on the backend plan.
