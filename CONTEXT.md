@@ -73,3 +73,9 @@ A glossary of the domain terms used in this project. Implementation details (tab
 **Definition:** A Creator whom the community team trusts to build syllabi at scale. Her syllabi carry a visible Content Lead badge as a sign of quality, she is not limited in the number of Bubbles she holds, and she gets a larger allowance of agent runs. She may build a Bubble and leave it, and a woman who wants to run it forks it and becomes the Founder of her own copy while the Content Lead's original is preserved. A Creator becomes a Content Lead by asking the Admin team, or by building several Bubbles that worked well. The platform only suggests candidates to the Admin team, based on Bubbles whose Sessions were all completed and on syllabi that other women have forked; it never promotes anyone by itself. An Admin always decides, grants the role and can withdraw it. The role is platform-wide and carries no power to edit or remove other women's Bubbles.
 **Not to be confused with:** Admin, who governs the platform, and Moderator, who edits one Bubble's syllabus.
 **Resolved:** 2026-10-15, during the grill session on the backend plan.
+
+## Import
+
+**Definition:** Bringing a syllabus built elsewhere, in any AI tool or by hand, into the platform by pasting it or uploading a file in the platform's uniform format. A downloadable template shows the format. An imported syllabus arrives as a Syllabus plan that the Founder reviews before it is used.
+**Not to be confused with:** Fork, which copies a syllabus that is already on the platform, and the agent, which researches and builds a plan itself.
+**Resolved:** 2026-10-15, during the grill session on the backend plan.
