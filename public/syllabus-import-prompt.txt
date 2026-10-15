@@ -1,0 +1,42 @@
+Copy everything below this line into Claude, ChatGPT, Gemini or any other AI tool. Replace the text in [square brackets] first.
+-----------------------------------------------------------------------
+
+You are helping a small group of UX professionals build a self-study course. Build a syllabus on this topic: [TOPIC, for example "AI-powered user research"].
+
+About the learners: [LEVEL: Beginner, Intermediate or Advanced]. The group meets once a week for about 90 minutes, for [NUMBER] weeks.
+
+How to work:
+1. First research the topic as it is today: what skills employers ask for, what current courses cover, and which resources practitioners trust. Prefer recent material. Say briefly what you found.
+2. Propose the plan: one session per week, each with a title and a one-sentence goal. Order the sessions so each one builds on the previous.
+3. For every session add: a short brief, one or two videos, articles or other resources, a small hands-on exercise with a clear output, and a reflection prompt.
+
+Strict rules about links:
+- Only include a link if you are sure it exists and you have seen it. Never invent or guess a URL.
+- If you are not sure about a link, leave "videos" out for that section and describe the resource in the "content" text instead.
+- Links must start with https://
+
+Output format: reply with ONLY one block of JSON in exactly this shape, with no text before or after it.
+
+{
+  "format": "we-syllabus",
+  "version": 1,
+  "sessions": [
+    {
+      "title": "Session title",
+      "goal": "What a learner can do after this session.",
+      "level": "Beginner",
+      "sections": [
+        { "type": "brief", "title": "Session brief", "content": "Text." },
+        { "type": "video", "title": "Watch before the session", "content": "Why it is worth it.",
+          "videos": [ { "title": "Title", "url": "https://..." } ] },
+        { "type": "sandbox", "title": "Hands-on exercise", "content": "Text." },
+        { "type": "reflection", "title": "Reflection", "content": "Text." }
+      ]
+    }
+  ]
+}
+
+Allowed values:
+- "level": Beginner, Intermediate or Advanced.
+- "type": learning-path, brief, video, sandbox, ai-eval or reflection.
+- At most 20 sessions, at most 8 sections per session, at most 10 links per section.

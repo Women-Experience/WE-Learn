@@ -85,3 +85,10 @@ A glossary of the domain terms used in this project. Implementation details (tab
 **Definition:** A place in a Bubble held by a woman who learns in it. A Bubble has between 2 and 8 Seats, set by its Founder. A woman may hold a Seat in only one open Bubble at a time, unless she is a Content Lead. A Founder or Moderator who only builds or facilitates holds no Seat.
 **Not to be confused with:** Membership. A Member who holds no Seat belongs to the Bubble but does not use up one of its places.
 **Resolved:** 2026-10-15, during the grill session on the backend plan.
+
+## Ownership request
+
+**Definition:** A Member's request to take over a Bubble that is still running, instead of copying it. The Founder answers it. If nobody answers within 5 working days (Sunday to Thursday, minus any listed days off), it goes to the Admins to decide. Accepting hands the Bubble to the requester, and the previous Founder stays in it as a Member.
+**Not to be confused with:** Fork, which makes a separate copy, and the Founder voluntarily handing the Bubble to a successor.
+**Resolved:** 2026-10-15, during the grill session on the backend plan.
+

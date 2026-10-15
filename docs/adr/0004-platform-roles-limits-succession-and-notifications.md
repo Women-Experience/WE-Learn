@@ -44,6 +44,7 @@ The team is small and not technical, so anything that needs per-woman manual con
 ## Consequences
 
 - A migration must separate who owns a Bubble from who holds a seat, because today every Founder is also a Member and cannot leave.
+- Implemented in migration 004 (Stage A): notifications (in the site; email is queued for women who gave consent and still needs a small sender), ownership requests with a deadline of 5 working days counted Sunday to Thursday plus an optional list of days off (`non_working_days`, edited by an Admin) for holidays, and a daily job that sends overdue requests to the Admins. The job needs the pg_cron extension, which has to be switched on in the Supabase dashboard.
 - Implemented in migration 003 (Stage A). Two rules were settled while building it: a closed Bubble cannot be reopened by its Founder (members' seats were released, so reopening could break the one-learning-seat limit; an Admin can reopen it, or the Founder forks it), and a Fork counts toward the owned-Bubble limit. Both limits are rows in `platform_settings`.
 - The security rules need tests, because more roles mean more places for a mistake.
 - Notifications need a table, an email sender with a free tier and a daily scheduled job.
@@ -51,6 +52,5 @@ The team is small and not technical, so anything that needs per-woman manual con
 
 ## Open items
 
-- Whether public holidays are skipped when counting working days, or only the weekend.
 - The numbers for learning seats and owned Bubbles are starting values, to be confirmed after the pilot.
 - How an Admin is identified and first appointed.

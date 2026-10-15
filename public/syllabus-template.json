@@ -1,0 +1,36 @@
+{
+  "format": "we-syllabus",
+  "version": 1,
+  "sessions": [
+    {
+      "title": "Session title, for example: What is AI-assisted user research?",
+      "goal": "One or two sentences: what a learner can do after this session.",
+      "level": "Beginner",
+      "sections": [
+        {
+          "type": "brief",
+          "title": "Session brief",
+          "content": "A short introduction: what we will cover and why it matters."
+        },
+        {
+          "type": "video",
+          "title": "Watch before the session",
+          "content": "Why this video is worth watching.",
+          "videos": [
+            { "title": "Title of the video", "url": "https://example.com/replace-with-a-real-link" }
+          ]
+        },
+        {
+          "type": "sandbox",
+          "title": "Hands-on exercise",
+          "content": "A small project with a clear output the learner can share."
+        },
+        {
+          "type": "reflection",
+          "title": "Reflection",
+          "content": "Two or three questions to think about after the session."
+        }
+      ]
+    }
+  ]
+}
