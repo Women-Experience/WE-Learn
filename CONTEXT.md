@@ -79,3 +79,9 @@ A glossary of the domain terms used in this project. Implementation details (tab
 **Definition:** Bringing a syllabus built elsewhere, in any AI tool or by hand, into the platform by pasting it or uploading a file in the platform's uniform format. A downloadable template shows the format. An imported syllabus arrives as a Syllabus plan that the Founder reviews before it is used.
 **Not to be confused with:** Fork, which copies a syllabus that is already on the platform, and the agent, which researches and builds a plan itself.
 **Resolved:** 2026-10-15, during the grill session on the backend plan.
+
+## Seat
+
+**Definition:** A place in a Bubble held by a woman who learns in it. A Bubble has between 2 and 8 Seats, set by its Founder. A woman may hold a Seat in only one open Bubble at a time, unless she is a Content Lead. A Founder or Moderator who only builds or facilitates holds no Seat.
+**Not to be confused with:** Membership. A Member who holds no Seat belongs to the Bubble but does not use up one of its places.
+**Resolved:** 2026-10-15, during the grill session on the backend plan.

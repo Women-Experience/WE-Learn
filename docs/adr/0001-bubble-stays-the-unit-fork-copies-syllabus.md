@@ -31,4 +31,5 @@ Reuse happens through **Fork**: any signed-in woman can open a new Bubble from t
 - Easier: no rewrite of what exists, no way for one woman to damage another's syllabus, and a clear chain of credit from the source to every copy.
 - Harder: improvements made in a copy do not flow back to the source on their own. A later "suggest this back to the source" step can be added if the community wants it.
 - Many diverging copies of a popular syllabus are expected and accepted.
-- Open: whether a Bubble's resources are copied along with the syllabus, and whether a fork counts toward the existing limit of 10 Bubbles per Founder.
+- Decided while building: a Fork copies sessions and sections only. Resources, members, progress and personal notes are never copied, because resources and progress are private to the Bubble's members.
+- Decided while building: a Fork counts toward the Founder's limit of owned open Bubbles (see ADR 0004), like any other Bubble she founds. This replaces the earlier limit of 10 Bubbles per Founder.
