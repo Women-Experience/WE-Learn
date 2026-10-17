@@ -21,6 +21,8 @@ interface Outcome { data: unknown[] | null; error: unknown }
 
 let outcome: Outcome = { data: [{ id: 'x' }], error: null };
 let calls: string[] = [];
+let rpcCalls: Array<{ fn: string; args: unknown }> = [];
+let rpcOutcome: { data: unknown; error: unknown } = { data: null, error: null };
 
 function makeChain() {
   const chain: Record<string, unknown> = {};
@@ -38,6 +40,10 @@ function makeChain() {
 vi.mock('../lib/supabase', () => ({
   supabase: {
     from: (table: string) => { calls.push(`from(${table})`); return makeChain(); },
+    rpc: (fn: string, args: unknown) => {
+      rpcCalls.push({ fn, args });
+      return Promise.resolve(rpcOutcome);
+    },
     auth: {
       getUser: async () => ({ data: { user: { id: 'user-1', email: 'a@b.c' } } }),
     },
@@ -46,7 +52,7 @@ vi.mock('../lib/supabase', () => ({
 
 import * as api from './api';
 
-beforeEach(() => { calls = []; outcome = { data: [{ id: 'x' }], error: null }; });
+beforeEach(() => { rpcCalls = []; rpcOutcome = { data: null, error: null }; calls = []; outcome = { data: [{ id: 'x' }], error: null }; });
 
 const allowed = () => { outcome = { data: [{ id: 'x' }], error: null }; };
 const blocked = () => { outcome = { data: [], error: null } };  // RLS filtered it
@@ -56,6 +62,7 @@ const blocked = () => { outcome = { data: [], error: null } };  // RLS filtered 
 const guarded: Array<[string, () => Promise<unknown>]> = [
   ['updateBubbleRow',  () => api.updateBubbleRow('b1', { title: 'New title' })],
   ['deleteBubbleRow',  () => api.deleteBubbleRow('b1')],
+  ['closeBubble',      () => api.closeBubble('b1')],
   ['leaveBubbleApi',   () => api.leaveBubbleApi('b1')],
   ['removeMember',     () => api.removeMember('b1', 'user-2')],
   ['updateSessionRow', () => api.updateSessionRow('s1', { title: 'Renamed' })],
@@ -156,5 +163,82 @@ describe('toIsoDate', () => {
     expect(api.toIsoDate('TBD')).toBeNull();
     expect(api.toIsoDate('not a date')).toBeNull();
     expect(api.toIsoDate(null)).toBeNull();
+  });
+});
+
+
+// ─── Stage A: RPC wrappers ───────────────────────────────────────────────────
+
+describe('stage A RPC wrappers', () => {
+  it('forkBubble sends the right arguments and returns the new id', async () => {
+    rpcOutcome = { data: 'new-id', error: null };
+    const id = await api.forkBubble('src', { title: 'T', maxSeats: 4 });
+    expect(id).toBe('new-id');
+    expect(rpcCalls[0]).toEqual({
+      fn: 'fork_bubble',
+      args: {
+        source_bubble: 'src', p_title: 'T', p_max_seats: 4, p_schedule_day: null,
+        p_schedule_time: null, p_start_date: null, p_founder_learns: null,
+      },
+    });
+  });
+
+  it('createBubble passes founderLearns through', async () => {
+    rpcOutcome = { data: 'b9', error: null };
+    await api.createBubble({
+      title: 't', topic: 't', description: 'd', level: 'Beginner', maxSeats: 4,
+      scheduleDay: 'Monday', scheduleTime: '7:00 PM', founderLearns: false,
+    });
+    expect((rpcCalls[0].args as Record<string, unknown>).p_founder_learns).toBe(false);
+  });
+
+  it('transferFounder passes leave_bubble', async () => {
+    await api.transferFounder('b', 'u2', true);
+    expect(rpcCalls[0].args).toEqual({ target_bubble: 'b', new_founder: 'u2', leave_bubble: true });
+  });
+
+  it('setFounderSeat calls set_founder_seat', async () => {
+    await api.setFounderSeat('b', false);
+    expect(rpcCalls[0]).toEqual({ fn: 'set_founder_seat', args: { target_bubble: 'b', p_learns: false } });
+  });
+
+  it('ownership functions call the matching RPCs', async () => {
+    rpcOutcome = { data: 'req-1', error: null };
+    expect(await api.requestOwnership('b', 'hi')).toBe('req-1');
+    await api.respondOwnershipRequest('req-1', true);
+    await api.withdrawOwnershipRequest('req-1');
+    expect(rpcCalls.map(c => c.fn)).toEqual([
+      'request_ownership', 'respond_ownership_request', 'withdraw_ownership_request',
+    ]);
+  });
+
+  it('validateSyllabusImport returns the server verdict', async () => {
+    rpcOutcome = { data: { ok: false, errors: [{ path: 'sessions[0].title', message: 'missing' }] }, error: null };
+    const r = await api.validateSyllabusImport({});
+    expect(r.ok).toBe(false);
+    expect(r.errors[0].path).toBe('sessions[0].title');
+  });
+
+  it('importSyllabus returns the count of added sessions', async () => {
+    rpcOutcome = { data: 3, error: null };
+    expect(await api.importSyllabus('b', {})).toBe(3);
+    expect(rpcCalls[0].fn).toBe('import_syllabus');
+  });
+
+  it('server errors are thrown, not swallowed', async () => {
+    rpcOutcome = { data: null, error: new Error('You can learn in 1 open Bubble(s) at a time') };
+    await expect(api.forkBubble('src')).rejects.toThrow(/learn in 1 open/);
+    await expect(api.setFounderSeat('b', true)).rejects.toThrow();
+    await expect(api.requestOwnership('b')).rejects.toThrow();
+  });
+});
+
+describe('errorMessage', () => {
+  it('reads the message of a plain Supabase error object', () => {
+    expect(api.errorMessage({ message: 'You can learn in 1 open Bubble(s)' }, 'x')).toMatch(/learn in 1/);
+  });
+  it('falls back when there is no message', () => {
+    expect(api.errorMessage(null, 'fallback')).toBe('fallback');
+    expect(api.errorMessage({}, 'fallback')).toBe('fallback');
   });
 });

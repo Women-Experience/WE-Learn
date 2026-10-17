@@ -9,6 +9,7 @@ import {
 } from "../../data/api";
 import { useApp } from "../../context/AppContext";
 import { AddMemberModal } from "./AddMemberModal";
+import { OwnershipPanel } from "./OwnershipPanel";
 import type { Bubble, Member } from "../../types";
 
 /** Avatar with initial fallback (no more broken-image icons). */
@@ -275,6 +276,9 @@ export function MembersTab({ bubble, isFounder, onJoin }: Props) {
           )}
         </div>
       </div>
+
+      <OwnershipPanel bubble={bubble} isFounder={isFounder}
+        isMember={!!currentUser && bubble.memberIds.includes(currentUser.id)} />
 
       {/* Founder(s) */}
       {founders.length > 0 && (

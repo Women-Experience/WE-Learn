@@ -7,7 +7,7 @@
 
 import { supabase } from '../lib/supabase';
 import type {
-  Bubble, Member, Resource, Session, SessionSection, User, VideoEntry,
+  AppNotification, Bubble, Member, OwnershipRequest, OwnershipStatus, Resource, Session, SessionSection, User, VideoEntry,
 } from '../types';
 
 // ─── Formatting helpers ──────────────────────────────────────────────────────
@@ -151,6 +151,8 @@ type BubbleRow = {
   max_seats: number; taken_seats: number;
   schedule_day: string; schedule_time: string; start_date: string | null;
   founder_id: string; hero_image: string | null;
+  forked_from?: string | null;
+  credit_chain?: Array<{ bubble_id: string; title: string; author: string }> | null;
 };
 
 function mapBubble(row: BubbleRow, members: Member[] = []): Bubble {
@@ -172,6 +174,8 @@ function mapBubble(row: BubbleRow, members: Member[] = []): Bubble {
     sessions: [],   // loaded lazily via fetchBubbleDetail
     resources: [],  // loaded lazily via fetchBubbleDetail
     heroImage: row.hero_image ?? undefined,
+    forkedFrom: row.forked_from ?? undefined,
+    creditChain: (row.credit_chain ?? []).map(c => ({ bubbleId: c.bubble_id, title: c.title, author: c.author })),
   };
 }
 
@@ -369,6 +373,8 @@ export interface CreateBubbleInput {
   level: Bubble['level']; maxSeats: number;
   scheduleDay: string; scheduleTime: string;
   startDate?: string | null; heroImage?: string | null;
+  /** null/undefined = auto (learn if the limit allows, else facilitate). */
+  founderLearns?: boolean | null;
   sessions?: Array<{
     number: number; title: string; level?: Session['level'];
     date?: string | null;
@@ -388,6 +394,7 @@ export async function createBubble(input: CreateBubbleInput): Promise<string> {
     p_schedule_time: input.scheduleTime,
     p_start_date: input.startDate ?? null,
     p_hero_image: input.heroImage ?? null,
+    p_founder_learns: input.founderLearns ?? null,
   });
   if (error) throw error;
 
@@ -717,9 +724,11 @@ export async function leaveWaitlist(bubbleId: string): Promise<void> {
 }
 
 /** Founder: hand the founder role to another member. */
-export async function transferFounder(bubbleId: string, newFounderId: string): Promise<void> {
+export async function transferFounder(
+  bubbleId: string, newFounderId: string, leaveBubble = false,
+): Promise<void> {
   const { error } = await supabase.rpc('transfer_founder', {
-    target_bubble: bubbleId, new_founder: newFounderId,
+    target_bubble: bubbleId, new_founder: newFounderId, leave_bubble: leaveBubble,
   });
   if (error) throw error;
 }
@@ -743,4 +752,147 @@ export async function voteOnResource(resourceId: string, vote: 'up' | 'down' | n
       .upsert({ resource_id: resourceId, user_id: user.id, vote });
     if (error) throw error;
   }
+}
+
+// ─── Fork, founder seat, closing ─────────────────────────────────────────────
+
+/** Copy a Bubble's sessions into a new Bubble of my own. Returns the new id. */
+export async function forkBubble(sourceId: string, opts: {
+  title?: string; maxSeats?: number; scheduleDay?: string; scheduleTime?: string;
+  startDate?: string | null; founderLearns?: boolean | null;
+} = {}): Promise<string> {
+  const { data, error } = await supabase.rpc('fork_bubble', {
+    source_bubble: sourceId,
+    p_title: opts.title ?? null,
+    p_max_seats: opts.maxSeats ?? 8,
+    p_schedule_day: opts.scheduleDay ?? null,
+    p_schedule_time: opts.scheduleTime ?? null,
+    p_start_date: opts.startDate ?? null,
+    p_founder_learns: opts.founderLearns ?? null,
+  });
+  if (error) throw error;
+  return data as string;
+}
+
+/** Founder: take or give up my own learning seat. */
+export async function setFounderSeat(bubbleId: string, learns: boolean): Promise<void> {
+  const { error } = await supabase.rpc('set_founder_seat', {
+    target_bubble: bubbleId, p_learns: learns,
+  });
+  if (error) throw error;
+}
+
+/** Founder: close the Bubble. The syllabus stays and can be forked. */
+export async function closeBubble(id: string): Promise<void> {
+  await updateBubbleRow(id, { status: 'closed' });
+}
+
+// ─── Ownership requests ──────────────────────────────────────────────────────
+
+export async function requestOwnership(bubbleId: string, message = ''): Promise<string> {
+  const { data, error } = await supabase.rpc('request_ownership', {
+    p_bubble: bubbleId, p_message: message,
+  });
+  if (error) throw error;
+  return data as string;
+}
+
+export async function respondOwnershipRequest(requestId: string, accept: boolean): Promise<void> {
+  const { error } = await supabase.rpc('respond_ownership_request', {
+    p_request: requestId, p_accept: accept,
+  });
+  if (error) throw error;
+}
+
+export async function withdrawOwnershipRequest(requestId: string): Promise<void> {
+  const { error } = await supabase.rpc('withdraw_ownership_request', { p_request: requestId });
+  if (error) throw error;
+}
+
+type OwnershipRow = {
+  id: string; bubble_id: string; requester_id: string; message: string | null;
+  status: OwnershipStatus; due_at: string; profiles?: { name: string } | null;
+};
+
+/** Open (pending or escalated) requests for a Bubble I can see. */
+export async function fetchOwnershipRequests(bubbleId: string): Promise<OwnershipRequest[]> {
+  const { data, error } = await supabase
+    .from('ownership_requests')
+    .select('id, bubble_id, requester_id, message, status, due_at, profiles:requester_id(name)')
+    .eq('bubble_id', bubbleId)
+    .in('status', ['pending', 'escalated'])
+    .order('created_at');
+  if (error) throw error;
+  return ((data ?? []) as unknown as OwnershipRow[]).map(r => ({
+    id: r.id, bubbleId: r.bubble_id, requesterId: r.requester_id,
+    requesterName: r.profiles?.name ?? 'A member', message: r.message ?? '',
+    status: r.status, dueAt: r.due_at,
+  }));
+}
+
+// ─── Notifications ───────────────────────────────────────────────────────────
+
+type NotificationRow = {
+  id: string; kind: AppNotification['kind']; bubble_id: string | null;
+  message: string; read_at: string | null; created_at: string;
+};
+
+export async function fetchNotifications(): Promise<AppNotification[]> {
+  const { data, error } = await supabase
+    .from('notifications')
+    .select('id, kind, bubble_id, message, read_at, created_at')
+    .order('created_at', { ascending: false })
+    .limit(50);
+  if (error) throw error;
+  return ((data ?? []) as NotificationRow[]).map(r => ({
+    id: r.id, kind: r.kind, bubbleId: r.bubble_id, message: r.message,
+    read: r.read_at !== null, createdAt: r.created_at,
+  }));
+}
+
+export async function markNotificationsRead(ids: string[]): Promise<void> {
+  if (!ids.length) return;
+  const { error } = await supabase
+    .from('notifications').update({ read_at: new Date().toISOString() }).in('id', ids);
+  if (error) throw error;
+}
+
+// ─── Syllabus import ─────────────────────────────────────────────────────────
+
+export interface ImportIssue { path: string; message: string }
+
+/** Check a pasted/uploaded syllabus against the server's rules. */
+export async function validateSyllabusImport(
+  payload: unknown,
+): Promise<{ ok: boolean; errors: ImportIssue[] }> {
+  const { data, error } = await supabase.rpc('validate_syllabus_import', { payload });
+  if (error) throw error;
+  const d = data as { ok: boolean; errors?: ImportIssue[] };
+  return { ok: !!d.ok, errors: d.errors ?? [] };
+}
+
+/** Append the imported sessions (locked) to a Bubble. Returns how many were added. */
+export async function importSyllabus(bubbleId: string, payload: unknown): Promise<number> {
+  const { data, error } = await supabase.rpc('import_syllabus', {
+    p_bubble: bubbleId, p_payload: payload,
+  });
+  if (error) throw error;
+  return data as number;
+}
+
+/** Does the signed-in woman hold a learning seat in this Bubble? (null = not a member) */
+export async function fetchMyHoldsSeat(bubbleId: string): Promise<boolean | null> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+  const { data, error } = await supabase
+    .from('bubble_members').select('holds_seat')
+    .eq('bubble_id', bubbleId).eq('user_id', user.id).maybeSingle();
+  if (error) throw error;
+  return data ? !!(data as { holds_seat: boolean }).holds_seat : null;
+}
+
+/** Supabase errors are plain objects with a `message`, not Error instances. */
+export function errorMessage(err: unknown, fallback: string): string {
+  const m = (err as { message?: unknown } | null)?.message;
+  return typeof m === 'string' && m ? m : fallback;
 }

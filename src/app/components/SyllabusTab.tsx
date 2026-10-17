@@ -3,10 +3,11 @@ import { toast } from "sonner";
 import {
   CheckCircle2, RefreshCw, Lock, BookOpen, FileText, PlayCircle, Wrench, Bot, MessageCircle,
   Plus, Pin, MoreVertical, Pencil, Sparkles, Copy, ChevronRight, ChevronUp, ChevronDown, Trash2,
-  Check, Star, X,
+  Check, Star, X, Upload,
 } from "lucide-react";
 import type { Bubble, Session, SessionStatus, BubbleLevel, VideoEntry } from "../../types";
 import { DatePicker } from "./DatePicker";
+import { ImportSyllabusModal } from "./ImportSyllabusModal";
 import * as api from "../../data/api";
 import { useApp } from "../../context/AppContext";
 
@@ -837,6 +838,7 @@ export function SyllabusTab({ bubble, isFounder, isAuthor = false }: Props) {
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingWithAI, setEditingWithAI] = useState(false);
+  const [showImport, setShowImport] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{ session: Session; index: number } | null>(null);
 
   // Keep in sync when the syllabus arrives/changes from the database
@@ -1096,16 +1098,28 @@ export function SyllabusTab({ bubble, isFounder, isAuthor = false }: Props) {
           Sessions
         </h3>
         {isFounder && (
-          <button
-            onClick={addSessionAndEdit}
-            className="flex items-center gap-1.5 px-3.5 py-2 min-h-[44px] rounded-xl bg-[#00a79d] text-white text-[14px] font-semibold hover:bg-[#008f86] transition-colors shrink-0"
-            style={{ fontFamily: 'var(--font-body)' }}
-          >
-            <Plus className="size-4" strokeWidth={1.75} />
-            Add Session
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowImport(true)}
+              className="flex items-center gap-1.5 px-3.5 py-2 min-h-[44px] rounded-xl border border-[#E9ECEF] text-[#495057] text-[14px] font-semibold hover:border-[#00a79d] hover:text-[#00a79d] transition-colors shrink-0"
+              style={{ fontFamily: 'var(--font-body)' }}
+            >
+              <Upload className="size-4" strokeWidth={1.75} />
+              <span className="hidden sm:inline">Import</span>
+            </button>
+            <button
+              onClick={addSessionAndEdit}
+              className="flex items-center gap-1.5 px-3.5 py-2 min-h-[44px] rounded-xl bg-[#00a79d] text-white text-[14px] font-semibold hover:bg-[#008f86] transition-colors shrink-0"
+              style={{ fontFamily: 'var(--font-body)' }}
+            >
+              <Plus className="size-4" strokeWidth={1.75} />
+              Add Session
+            </button>
+          </div>
         )}
       </div>
+
+      {showImport && <ImportSyllabusModal bubble={bubble} onClose={() => setShowImport(false)} />}
 
       {/* Session list */}
       <div className="flex flex-col gap-3">

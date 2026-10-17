@@ -1,3 +1,4 @@
+import { NotificationBell } from "./NotificationBell";
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
@@ -235,7 +236,7 @@ function CreateBubbleCard({ onClick }: { onClick: () => void }) {
         </p>
 
         <div className="mt-1 space-y-1.5">
-          {['AI generates your full syllabus', 'Recurring schedule & 4–8 participants', 'Live group page ready to share'].map(f => (
+          {['AI generates your full syllabus', 'Recurring schedule & 2–8 participants', 'Live group page ready to share'].map(f => (
             <div key={f} className="flex items-center gap-2">
               <div className="w-1.5 h-1.5 rounded-full bg-[#00a79d] shrink-0" />
               <span className="text-[12px] text-neutral-500" style={{ fontFamily: 'var(--font-body)' }}>{f}</span>
@@ -405,7 +406,7 @@ export function LandingPage() {
           </button>
 
           {isLoggedIn && currentUser ? (
-            <AvatarMenu user={currentUser} />
+            <div className="flex items-center gap-1.5"><NotificationBell /><AvatarMenu user={currentUser} /></div>
           ) : authReady ? (
             <button
               onClick={() => setShowAuth(true)}

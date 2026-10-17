@@ -215,11 +215,13 @@ function ScheduleWidget({ onSelect, locked }: { onSelect: (day: string, time: st
   );
 }
 
-// Bubbles are 4–8 women by design (and the database enforces it).
+// Bubbles hold 2–8 learners (the database enforces it). Four is recommended,
+// not required: a Bubble can start with fewer and keeps accepting members.
 const SEAT_OPTIONS = [
-  { key: 'small',    label: 'Cozy',     range: '4–5 members',  desc: 'Intimate and focused',      value: 5, recommended: false },
-  { key: 'standard', label: 'Standard', range: '6 members',    desc: 'Balanced group energy',     value: 6, recommended: true  },
-  { key: 'large',    label: 'Full',     range: '7–8 members',  desc: 'The widest a Bubble goes',  value: 8, recommended: false },
+  { key: 'tiny',     label: 'Tiny',     range: '2–3 members',  desc: 'A study pair or trio',       value: 3, recommended: false },
+  { key: 'standard', label: 'Standard', range: '4 members',    desc: 'Our recommendation',         value: 4, recommended: true  },
+  { key: 'medium',   label: 'Roomy',    range: '5–6 members',  desc: 'More voices, more energy',   value: 6, recommended: false },
+  { key: 'large',    label: 'Full',     range: '7–8 members',  desc: 'The widest a Bubble goes',   value: 8, recommended: false },
 ] as const;
 
 type SeatKey = typeof SEAT_OPTIONS[number]['key'];
@@ -231,7 +233,7 @@ function SeatsWidget({ onSelect, locked }: { onSelect: (n: number) => void; lock
   return (
     <div className="flex flex-col gap-3">
       <p className="text-[12px] text-[#6C757D]" style={{ fontFamily: 'var(--font-body)' }}>
-        We recommend 6–8 for the best learning experience.
+        We recommend 4. You can start with fewer, and others can join any time until it's full.
       </p>
       <div className="flex flex-col gap-2">
         {SEAT_OPTIONS.map(opt => (

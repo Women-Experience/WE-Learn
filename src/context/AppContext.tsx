@@ -24,6 +24,8 @@ interface AppContextValue {
   createBubble: (input: api.CreateBubbleInput) => Promise<string>;
   updateBubble: (id: string, patch: Partial<Bubble>) => Promise<void>;
   deleteBubble: (id: string) => Promise<void>;
+  closeBubble: (id: string) => Promise<void>;
+  forkBubble: (sourceId: string, opts?: Parameters<typeof api.forkBubble>[1]) => Promise<string>;
 
   // Join / Leave
   joinBubble: (bubbleId: string) => Promise<'joined' | 'waitlisted'>;
@@ -189,6 +191,26 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  async function closeBubble(id: string) {
+    setBubbles(bs => bs.map(b => (b.id === id ? { ...b, status: 'closed' } : b)));
+    try {
+      await api.closeBubble(id);
+      refreshUser(); // closing releases members' seats
+    } catch (err) {
+      refreshBubbles();
+      throw err;
+    }
+  }
+
+  async function forkBubble(sourceId: string, opts?: Parameters<typeof api.forkBubble>[1]) {
+    const id = await api.forkBubble(sourceId, opts);
+    await Promise.all([
+      refreshBubbles(true),
+      api.fetchCurrentUser().then(u => setCurrentUser(u)),
+    ]);
+    return id;
+  }
+
   // ─── Membership ────────────────────────────────────────────────────────────
 
   async function joinBubble(bubbleId: string): Promise<'joined' | 'waitlisted'> {
@@ -225,7 +247,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       currentUser, isLoggedIn: !!currentUser, authReady,
       login, logout, refreshUser,
       bubbles, bubblesLoading, refreshBubbles: () => refreshBubbles(),
-      loadBubbleDetail, createBubble, updateBubble, deleteBubble,
+      loadBubbleDetail, createBubble, updateBubble, deleteBubble, closeBubble, forkBubble,
       joinBubble, leaveBubble, isJoined, isFounder,
       recentBubbleIds, addRecentBubble,
     }}>

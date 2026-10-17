@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import { X, XCircle, Check, CheckCircle2, PartyPopper, AlertTriangle, Info, Bell } from "lucide-react";
+import { errorMessage } from "../../data/api";
 import { useApp } from "../../context/AppContext";
 import { updateMyProfile } from "../../data/api";
 import type { Bubble } from "../../types";
@@ -73,7 +74,7 @@ export function JoinBubbleModal({ bubble, onClose, onEnter }: Props) {
           setStep('full');
         }
       })
-      .catch(() => toast.error('Could not join right now — please try again.'))
+      .catch(err => toast.error(errorMessage(err, 'Could not join right now — please try again.')))
       .finally(() => setJoining(false));
   }
 
@@ -86,7 +87,7 @@ export function JoinBubbleModal({ bubble, onClose, onEnter }: Props) {
         else setStep('done'); // a seat opened up in the meantime!
         if (outcome === 'waitlisted') onClose();
       })
-      .catch(() => toast.error('Could not join the waitlist — please try again.'))
+      .catch(err => toast.error(errorMessage(err, 'Could not join the waitlist — please try again.')))
       .finally(() => setJoining(false));
   }
 
