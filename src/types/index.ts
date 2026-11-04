@@ -43,34 +43,44 @@ export interface Bubble {
 
 // ─── Session ──────────────────────────────────────────────────────────────────
 
-export type SessionStatus = 'done' | 'in-progress' | 'locked';
+export type SessionStatus = 'draft' | 'this-week' | 'done';
 
-export interface VideoEntry {
-  id: string;
-  title: string;
-  url: string;
-}
+export type SectionType = 'check-in' | 'last-week' | 'learn' | 'discuss' | 'practice' | 'wrap-up';
 
 export interface SessionSection {
   id: string;
-  type: 'learning-path' | 'brief' | 'video' | 'sandbox' | 'ai-eval' | 'reflection';
+  type: SectionType;
   title: string;
-  content?: string;
-  videoUrl?: string;
-  videoTitle?: string;
-  videos?: VideoEntry[];
+  minutes: number;
+  whatHappens?: string;
+  notes?: string;
 }
+
+export interface ExtraResource {
+  id: string;
+  title: string;
+  url: string;
+  description: string;
+}
+
+export type SubmissionType = 'text' | 'file' | 'link' | 'image';
 
 export interface Session {
   id: string;
   number: number;       // 1, 2, 3... → displayed as S01, S02...
   title: string;
   status: SessionStatus;
-  date: string;         // "Mar 4, 2026"
-  duration: number;     // minutes, always 90
+  date: string;         // YYYY-MM-DD
+  duration: number;     // minutes total (sum of section minutes)
   xp: number;
   level: BubbleLevel;
+  learningObjective: string; // "By the end, we'll be able to…"
+  ledBy: string;             // member id
+  submissionTypes: SubmissionType[];
   sections: SessionSection[];
+  preMaterials?: string;
+  homework?: string;
+  extraResources?: ExtraResource[];
   // progress state
   projectUrl?: string;
   reflectionNote?: string;

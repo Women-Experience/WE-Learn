@@ -1,4 +1,4 @@
-import type { Bubble, Member, Resource, Session, User } from '../types';
+import type { Bubble, Member, Resource, Session, SessionSection, User } from '../types';
 
 // ─── Avatar URLs (Unsplash) ───────────────────────────────────────────────────
 
@@ -82,44 +82,74 @@ export const MOCK_MEMBERS: Record<string, Member> = {
 
 // ─── Sessions factory ─────────────────────────────────────────────────────────
 
-function makeSessions(count: number, doneTo: number): Session[] {
-  const titles = [
-    'Introduction & Foundations',
-    'Core Concepts Deep Dive',
-    'Practical Frameworks',
-    'Hands-On Workshop',
-    'Guest Expert Session',
-    'Mid-Program Review',
-    'Advanced Techniques',
-    'Real-World Case Studies',
-    'Peer Feedback & Critique',
-    'Final Project & Wrap-Up',
+const SESSION_TITLES = [
+  'Introduction & Foundations',
+  'Core Concepts Deep Dive',
+  'Practical Frameworks',
+  'Hands-On Workshop',
+  'Guest Expert Session',
+  'Mid-Program Review',
+  'Advanced Techniques',
+  'Real-World Case Studies',
+  'Peer Feedback & Critique',
+  'Final Project & Wrap-Up',
+];
+
+const LEARNING_OBJECTIVES = [
+  'identify the core AI design principles that make AI-native products different from traditional software',
+  'explain the key frameworks from this program and apply one to a real product example',
+  'choose the right framework for a given design challenge and justify the choice to the group',
+  'build a working prototype that demonstrates at least one AI design pattern',
+  'evaluate an expert\'s approach and extract two insights to bring into our own work',
+  'give structured peer feedback on three projects using the rubric from session 3',
+  'apply at least one advanced technique to refine an existing design from an earlier session',
+  'diagnose what worked and what failed in two real AI product launches',
+  'run a 5-minute critique using the critique format we practiced in session 3',
+  'present a complete project that incorporates at least three concepts from this program',
+];
+
+const DATES = [
+  '2026-02-18', '2026-02-25', '2026-03-04', '2026-03-11',
+  '2026-03-18', '2026-03-25', '2026-04-01', '2026-04-08',
+  '2026-04-15', '2026-04-22',
+];
+
+function makeSeedSections(sessionIdx: number): SessionSection[] {
+  const base: Omit<SessionSection, 'id'>[] = [
+    { type: 'check-in',  title: 'Check-in',          minutes: 10 },
+    { type: 'last-week', title: "Last week's task",   minutes: 15 },
+    { type: 'learn',     title: 'Learn',              minutes: 30 },
+    { type: 'discuss',   title: 'Discuss',            minutes: 25 },
+    { type: 'wrap-up',   title: 'Wrap-up',            minutes: 10 },
   ];
-  const dates = [
-    'Feb 18, 2026','Feb 25, 2026','Mar 4, 2026','Mar 11, 2026',
-    'Mar 18, 2026','Mar 25, 2026','Apr 1, 2026','Apr 8, 2026',
-  ];
-  return Array.from({ length: count }, (_, i) => ({
-    id: `s-${i + 1}`,
-    number: i + 1,
-    title: titles[i] ?? `Session ${i + 1}`,
-    status: (i < doneTo ? 'done' : i === doneTo ? 'in-progress' : 'locked') as Session['status'],
-    date: dates[i] ?? 'TBD',
-    duration: 90,
-    xp: 150,
-    level: (i < 2 ? 'Beginner' : i < 5 ? 'Intermediate' : 'Advanced') as Session['level'],
-    sections: [
-      { id: `${i}-lp`, type: 'learning-path', title: 'Learning Path',
-        content: `In this session you will explore the key concepts of ${titles[i] ?? 'the topic'}, building on what you learned in previous sessions.` },
-      { id: `${i}-br`, type: 'brief', title: 'Conceptual Brief',
-        content: `This session focuses on practical application. Come prepared with examples from your own work.` },
-      { id: `${i}-vid`, type: 'video', title: 'Video Resources',
-        videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
-        videoTitle: `Recommended Watch: ${titles[i] ?? 'Session Overview'}` },
-      { id: `${i}-sb`, type: 'sandbox', title: 'Project Sandbox',
-        content: 'Submit a link to your project or deliverable for this session.' },
-    ],
-  }));
+  return base.map((s, i) => ({ ...s, id: `s${sessionIdx + 1}-${i}` }));
+}
+
+function makeSessions(count: number, doneTo: number, founderId: string): Session[] {
+  return Array.from({ length: count }, (_, i) => {
+    const isFirst = i === 0;
+    const session: Session = {
+      id: `s-${i + 1}`,
+      number: i + 1,
+      title: SESSION_TITLES[i] ?? `Session ${i + 1}`,
+      status: (i < doneTo ? 'done' : i === doneTo ? 'this-week' : 'draft') as Session['status'],
+      date: DATES[i] ?? '2026-05-01',
+      duration: 90,
+      xp: 150,
+      level: (i < 2 ? 'Beginner' : i < 5 ? 'Intermediate' : 'Advanced') as Session['level'],
+      learningObjective: LEARNING_OBJECTIVES[i] ?? 'apply the core concepts from this session to a real example',
+      ledBy: founderId,
+      submissionTypes: ['link'],
+      sections: makeSeedSections(i),
+      preMaterials: isFirst
+        ? 'Come ready to introduce yourself in 60 seconds: your name, role, and one thing you want to get out of this Bubble.'
+        : undefined,
+      homework: isFirst
+        ? 'Map one real AI product you use daily: what it does, where it surprises you, and one thing you\'d change. Bring it as a screenshot + 3 bullet points to share at the start of session 2.'
+        : undefined,
+    };
+    return session;
+  });
 }
 
 // ─── Resources ────────────────────────────────────────────────────────────────
@@ -168,7 +198,7 @@ export const MOCK_BUBBLES: Bubble[] = [
     founderId: 'user-me',
     memberIds: ['user-me', 'user-noa', 'user-dana', 'user-shir', 'user-liat', 'user-ronit'],
     heroImage: HERO_IMAGES.ai,
-    sessions: makeSessions(8, 3),
+    sessions: makeSessions(8, 3, 'user-me'),
     resources: makeResources('user-noa'),
   },
   {
@@ -186,7 +216,7 @@ export const MOCK_BUBBLES: Bubble[] = [
     founderId: 'user-tamar',
     memberIds: ['user-tamar', 'user-hadas', 'user-ronit'],
     heroImage: HERO_IMAGES.product,
-    sessions: makeSessions(6, 0),
+    sessions: makeSessions(6, 0, 'user-tamar'),
     resources: makeResources('user-tamar'),
   },
   {
@@ -204,7 +234,7 @@ export const MOCK_BUBBLES: Bubble[] = [
     founderId: 'user-hadas',
     memberIds: ['user-hadas', 'user-me', 'user-liat', 'user-dana', 'user-shir'],
     heroImage: HERO_IMAGES.ux,
-    sessions: makeSessions(7, 1),
+    sessions: makeSessions(7, 1, 'user-hadas'),
     resources: makeResources('user-hadas'),
   },
   {
@@ -222,7 +252,7 @@ export const MOCK_BUBBLES: Bubble[] = [
     founderId: 'user-dana',
     memberIds: ['user-dana', 'user-noa', 'user-tamar', 'user-liat', 'user-ronit', 'user-hadas'],
     heroImage: HERO_IMAGES.research,
-    sessions: makeSessions(8, 2),
+    sessions: makeSessions(8, 2, 'user-dana'),
     resources: makeResources('user-dana'),
   },
   {
@@ -240,7 +270,7 @@ export const MOCK_BUBBLES: Bubble[] = [
     founderId: 'user-tamar',
     memberIds: ['user-tamar', 'user-noa'],
     heroImage: HERO_IMAGES.strategy,
-    sessions: makeSessions(6, 0),
+    sessions: makeSessions(6, 0, 'user-tamar'),
     resources: makeResources('user-tamar'),
   },
   {
@@ -258,7 +288,7 @@ export const MOCK_BUBBLES: Bubble[] = [
     founderId: 'user-liat',
     memberIds: ['user-liat', 'user-shir', 'user-ronit', 'user-hadas'],
     heroImage: HERO_IMAGES.systems,
-    sessions: makeSessions(8, 0),
+    sessions: makeSessions(8, 0, 'user-liat'),
     resources: makeResources('user-liat'),
   },
 ];

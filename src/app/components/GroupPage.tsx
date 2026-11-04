@@ -107,7 +107,7 @@ export function GroupPage() {
   const userJoined = (hasJoined || isJoined(bubble.id) || bubble.memberIds.includes(userId)) && !guestPreview;
 
   const tabs: { id: Tab; label: string; icon: typeof BookOpen; founderOnly?: boolean }[] = [
-    { id: 'syllabus',  label: 'Syllabus',  icon: BookOpen, founderOnly: false },
+    { id: 'syllabus',  label: 'Course Guide',  icon: BookOpen, founderOnly: false },
     { id: 'members',   label: 'Members',   icon: Users, founderOnly: false },
     { id: 'resources', label: 'Resources', icon: FolderOpen, founderOnly: false },
   ];

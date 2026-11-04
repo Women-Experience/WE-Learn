@@ -1,48 +1,62 @@
 import { useState, useRef, useEffect } from "react";
 import { toast } from "sonner";
 import {
-  CheckCircle2, RefreshCw, Lock, BookOpen, FileText, PlayCircle, Wrench, Bot, MessageCircle,
-  Plus, Pin, MoreVertical, Pencil, Sparkles, Copy, ChevronRight, ChevronUp, ChevronDown, Trash2,
-  Check, Star, X,
+  CheckCircle2, Circle, CalendarCheck,
+  MessageSquare, RotateCcw, BookOpen, Users, Zap, Flag,
+  Plus, MoreVertical, Pencil, Copy, ChevronRight, ChevronUp, ChevronDown, Trash2,
+  Check, Link2, Paperclip, AlignLeft, Image as ImageIcon, Target,
 } from "lucide-react";
-import type { Bubble, Session, SessionStatus, BubbleLevel, VideoEntry } from "../../types";
-import { DatePicker } from "./DatePicker";
+import type { Bubble, Session, SessionStatus, BubbleLevel, SessionSection, ExtraResource, SectionType, SubmissionType } from "../../types";
+import { getMemberById } from "../../data/mock";
 
-// ─── Status config ────────────────────────────────────────────────────────────
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+const SEED_SECTIONS: Omit<SessionSection, 'id'>[] = [
+  { type: 'check-in',  title: 'Check-in',        minutes: 10 },
+  { type: 'last-week', title: "Last week's task", minutes: 15 },
+  { type: 'learn',     title: 'Learn',            minutes: 30 },
+  { type: 'discuss',   title: 'Discuss',          minutes: 25 },
+  { type: 'wrap-up',   title: 'Wrap-up',          minutes: 10 },
+];
 
 const STATUS_CFG: Record<SessionStatus, { icon: typeof CheckCircle2; label: string; color: string; bg: string }> = {
-  'done':        { icon: CheckCircle2, label: 'Done',        color: '#065F46', bg: '#D1FAE5' },
-  'in-progress': { icon: RefreshCw,    label: 'In Progress', color: '#1E3A8A', bg: '#DBEAFE' },
-  'locked':      { icon: Lock,         label: 'Locked',      color: '#6C757D', bg: '#F1F3F5' },
+  'done':      { icon: CheckCircle2, label: 'Done',      color: '#065F46', bg: '#D1FAE5' },
+  'this-week': { icon: CalendarCheck, label: 'This Week', color: '#1E3A8A', bg: '#DBEAFE' },
+  'draft':     { icon: Circle,       label: 'Draft',     color: '#6C757D', bg: '#F1F3F5' },
 };
 
-const SECTION_ICONS: Record<string, typeof BookOpen> = {
-  'learning-path': BookOpen,
-  'brief':         FileText,
-  'video':         PlayCircle,
-  'sandbox':       Wrench,
-  'ai-eval':       Bot,
-  'reflection':    MessageCircle,
+const SECTION_ICONS: Record<SectionType, typeof BookOpen> = {
+  'check-in':  MessageSquare,
+  'last-week': RotateCcw,
+  'learn':     BookOpen,
+  'discuss':   Users,
+  'practice':  Zap,
+  'wrap-up':   Flag,
 };
+
+const SECTION_TYPE_LABELS: Record<SectionType, string> = {
+  'check-in':  'Check-in',
+  'last-week': "Last week's task",
+  'learn':     'Learn',
+  'discuss':   'Discuss',
+  'practice':  'Practice',
+  'wrap-up':   'Wrap-up',
+};
+
+const SUBMISSION_CFG: { type: SubmissionType; label: string; icon: typeof Link2 }[] = [
+  { type: 'link',  label: 'Project link',    icon: Link2 },
+  { type: 'file',  label: 'File upload',     icon: Paperclip },
+  { type: 'text',  label: 'Written response', icon: AlignLeft },
+  { type: 'image', label: 'Screenshot',      icon: ImageIcon },
+];
 
 // ─── Menu item ────────────────────────────────────────────────────────────────
 
 function MenuItem({
-  icon: Icon,
-  label,
-  disabled,
-  disabledTitle,
-  onClick,
-  danger,
-  hasSubmenu,
+  icon: Icon, label, disabled, disabledTitle, onClick, danger, hasSubmenu,
 }: {
-  icon: typeof Pencil;
-  label: string;
-  disabled?: boolean;
-  disabledTitle?: string;
-  onClick?: () => void;
-  danger?: boolean;
-  hasSubmenu?: boolean;
+  icon: typeof Pencil; label: string; disabled?: boolean; disabledTitle?: string;
+  onClick?: () => void; danger?: boolean; hasSubmenu?: boolean;
 }) {
   return (
     <button
@@ -50,11 +64,7 @@ function MenuItem({
       disabled={disabled}
       title={disabled ? disabledTitle : undefined}
       className={`w-full flex items-center gap-2.5 px-3.5 py-2.5 text-[13px] text-left transition-colors
-        ${disabled
-          ? 'opacity-40 cursor-not-allowed'
-          : danger
-            ? 'text-[#FA5252] hover:bg-[#FFF5F5]'
-            : 'text-[#212529] hover:bg-[#F8F9FA]'}`}
+        ${disabled ? 'opacity-40 cursor-not-allowed' : danger ? 'text-[#FA5252] hover:bg-[#FFF5F5]' : 'text-[#212529] hover:bg-[#F8F9FA]'}`}
       style={{ fontFamily: 'var(--font-body)' }}
     >
       <Icon className="size-4 shrink-0" strokeWidth={1.75} />
@@ -64,107 +74,31 @@ function MenuItem({
   );
 }
 
-// ─── Video list editor ────────────────────────────────────────────────────────
-
-function VideoListEditor({
-  entries,
-  onChange,
-}: {
-  entries: VideoEntry[];
-  onChange: (entries: VideoEntry[]) => void;
-}) {
-  return (
-    <div className="flex flex-col gap-3">
-      {entries.map((v, i) => (
-        <div key={v.id} className="flex flex-col gap-1.5 p-3 bg-[#F8F9FA] rounded-lg border border-[#E9ECEF]">
-          <div className="flex items-center justify-between mb-0.5">
-            <span className="text-[11px] text-[#ADB5BD] font-medium" style={{ fontFamily: 'var(--font-body)' }}>
-              Video {i + 1}
-            </span>
-            <button
-              onClick={() => onChange(entries.filter((_, j) => j !== i))}
-              className="text-[#ADB5BD] hover:text-[#FA5252] transition-colors p-1"
-            >
-              <Trash2 className="size-3.5" strokeWidth={1.75} />
-            </button>
-          </div>
-          <input
-            value={v.title}
-            onChange={e => { const next = entries.map((x, j) => j === i ? { ...x, title: e.target.value } : x); onChange(next); }}
-            placeholder="Video title"
-            className="w-full px-3 py-2 rounded-lg border border-[#E9ECEF] focus:outline-none focus:border-[#00a79d] text-[13px] bg-white"
-            style={{ fontFamily: 'var(--font-body)' }}
-          />
-          <input
-            value={v.url}
-            onChange={e => { const next = entries.map((x, j) => j === i ? { ...x, url: e.target.value } : x); onChange(next); }}
-            placeholder="https://youtube.com/watch?v=…"
-            className="w-full px-3 py-2 rounded-lg border border-[#E9ECEF] focus:outline-none focus:border-[#00a79d] text-[13px] bg-white"
-            style={{ fontFamily: 'var(--font-body)' }}
-          />
-        </div>
-      ))}
-      <button
-        onClick={() => onChange([...entries, { id: `v-${Date.now()}`, title: '', url: '' }])}
-        className="flex items-center gap-1.5 text-[13px] text-[#00a79d] hover:underline w-fit"
-        style={{ fontFamily: 'var(--font-body)' }}
-      >
-        <Plus className="size-3.5" strokeWidth={2} /> Add video
-      </button>
-    </div>
-  );
-}
-
-// ─── Three-dot contextual menu ────────────────────────────────────────────────
+// ─── Three-dot menu ────────────────────────────────────────────────────────────
 
 function ThreeDotsMenu({
-  isOpen,
-  isLocked,
-  isFirst,
-  isLast,
-  onOpen,
-  onClose,
-  onEdit,
-  onEditAI,
-  onDuplicate,
-  onMoveUp,
-  onMoveDown,
-  onDelete,
+  isOpen, isFirst, isLast,
+  onOpen, onClose, onEdit, onDuplicate, onMoveUp, onMoveDown, onDelete,
 }: {
-  isOpen: boolean;
-  isLocked: boolean;
-  isFirst: boolean;
-  isLast: boolean;
-  onOpen: () => void;
-  onClose: () => void;
-  onEdit: () => void;
-  onEditAI: () => void;
-  onDuplicate: () => void;
-  onMoveUp: () => void;
-  onMoveDown: () => void;
-  onDelete: () => void;
+  isOpen: boolean; isFirst: boolean; isLast: boolean;
+  onOpen: () => void; onClose: () => void; onEdit: () => void;
+  onDuplicate: () => void; onMoveUp: () => void; onMoveDown: () => void; onDelete: () => void;
 }) {
   const menuRef = useRef<HTMLDivElement>(null);
   const [showMove, setShowMove] = useState(false);
 
-  // Close on outside click
   useEffect(() => {
     if (!isOpen) return;
     function handler(e: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        onClose();
-      }
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) onClose();
     }
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, [isOpen, onClose]);
 
-  // Close on Escape
   useEffect(() => {
     if (!isOpen) return;
-    function handler(e: KeyboardEvent) {
-      if (e.key === 'Escape') onClose();
-    }
+    function handler(e: KeyboardEvent) { if (e.key === 'Escape') onClose(); }
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
   }, [isOpen, onClose]);
@@ -174,8 +108,7 @@ function ThreeDotsMenu({
       <button
         onClick={e => { e.stopPropagation(); isOpen ? onClose() : onOpen(); }}
         className="size-8 rounded-lg flex items-center justify-center text-[#4B5563] hover:text-[#212529] hover:bg-[#F8F9FA] transition-colors"
-        title="Options"
-        aria-label="Section options"
+        aria-label="Session options"
       >
         <MoreVertical className="size-4" strokeWidth={1.75} />
       </button>
@@ -186,76 +119,26 @@ function ThreeDotsMenu({
           style={{ boxShadow: '0 8px 24px rgba(0,0,0,0.12)', minWidth: 180 }}
           onClick={e => e.stopPropagation()}
         >
-          {/* Edit */}
-          <MenuItem
-            icon={Pencil}
-            label="Edit"
-            disabled={isLocked}
-            disabledTitle="Unlock section to edit"
-            onClick={() => { if (!isLocked) { onEdit(); onClose(); } }}
-          />
-
-          {/* Edit with AI */}
-          <MenuItem
-            icon={Sparkles}
-            label="Edit with AI"
-            disabled={isLocked}
-            disabledTitle="Unlock section to edit"
-            onClick={() => { if (!isLocked) { onEditAI(); onClose(); } }}
-          />
-
-          {/* Duplicate */}
-          <MenuItem
-            icon={Copy}
-            label="Duplicate"
-            onClick={() => { onDuplicate(); onClose(); }}
-          />
-
-          {/* Move — nested submenu */}
+          <MenuItem icon={Pencil} label="Edit" onClick={() => { onEdit(); onClose(); }} />
+          <MenuItem icon={Copy} label="Duplicate" onClick={() => { onDuplicate(); onClose(); }} />
           <div
             className="relative"
             onMouseEnter={() => setShowMove(true)}
             onMouseLeave={() => setShowMove(false)}
           >
-            <MenuItem
-              icon={ChevronUp}
-              label="Move"
-              hasSubmenu
-              onClick={() => setShowMove(s => !s)}
-            />
+            <MenuItem icon={ChevronUp} label="Move" hasSubmenu onClick={() => setShowMove(s => !s)} />
             {showMove && (
               <div
                 className="absolute left-full top-0 ml-1 bg-white rounded-xl border border-[#E9ECEF] py-1"
                 style={{ boxShadow: '0 8px 24px rgba(0,0,0,0.12)', minWidth: 140 }}
               >
-                <MenuItem
-                  icon={ChevronUp}
-                  label="Move Up"
-                  disabled={isFirst}
-                  onClick={() => { if (!isFirst) { onMoveUp(); onClose(); } }}
-                />
-                <MenuItem
-                  icon={ChevronDown}
-                  label="Move Down"
-                  disabled={isLast}
-                  onClick={() => { if (!isLast) { onMoveDown(); onClose(); } }}
-                />
+                <MenuItem icon={ChevronUp} label="Move Up" disabled={isFirst} onClick={() => { if (!isFirst) { onMoveUp(); onClose(); } }} />
+                <MenuItem icon={ChevronDown} label="Move Down" disabled={isLast} onClick={() => { if (!isLast) { onMoveDown(); onClose(); } }} />
               </div>
             )}
           </div>
-
-          {/* Divider */}
           <div className="h-px bg-[#F1F3F5] my-1" />
-
-          {/* Delete */}
-          <MenuItem
-            icon={Trash2}
-            label="Delete"
-            danger
-            disabled={isLocked}
-            disabledTitle="Unlock section to edit"
-            onClick={() => { if (!isLocked) { onDelete(); onClose(); } }}
-          />
+          <MenuItem icon={Trash2} label="Delete" danger onClick={() => { onDelete(); onClose(); }} />
         </div>
       )}
     </div>
@@ -264,47 +147,20 @@ function ThreeDotsMenu({
 
 // ─── Delete confirm modal ─────────────────────────────────────────────────────
 
-function DeleteConfirmModal({
-  title,
-  onConfirm,
-  onCancel,
-}: {
-  title: string;
-  onConfirm: () => void;
-  onCancel: () => void;
-}) {
+function DeleteConfirmModal({ title, onConfirm, onCancel }: { title: string; onConfirm: () => void; onCancel: () => void }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onCancel} />
-      <div
-        className="relative bg-white rounded-2xl w-full max-w-sm overflow-hidden"
-        style={{ boxShadow: '0 24px 64px rgba(0,0,0,0.18)' }}
-      >
+      <div className="relative bg-white rounded-2xl w-full max-w-sm overflow-hidden" style={{ boxShadow: '0 24px 64px rgba(0,0,0,0.18)' }}>
         <div className="px-6 pt-6 pb-5 flex flex-col gap-3">
           <div className="size-11 rounded-xl bg-[#FEE2E2] flex items-center justify-center">
             <Trash2 className="size-5 text-[#FA5252]" strokeWidth={1.75} />
           </div>
-          <h3 className="font-bold text-[17px] text-[#212529]" style={{ fontFamily: 'var(--font-display)' }}>
-            Delete "{title}"?
-          </h3>
-          <p className="text-[13px] text-[#6C757D]" style={{ fontFamily: 'var(--font-body)' }}>
-            This will hide the section from current and future views.
-          </p>
+          <h3 className="font-bold text-[17px] text-[#212529]" style={{ fontFamily: 'var(--font-display)' }}>Delete "{title}"?</h3>
+          <p className="text-[13px] text-[#6C757D]" style={{ fontFamily: 'var(--font-body)' }}>This will remove the session permanently.</p>
           <div className="flex gap-3 mt-2">
-            <button
-              onClick={onCancel}
-              className="flex-1 py-2.5 rounded-xl border border-[#E9ECEF] text-[14px] text-[#6C757D] hover:bg-[#F8F9FA] transition-colors"
-              style={{ fontFamily: 'var(--font-body)' }}
-            >
-              Cancel
-            </button>
-            <button
-              onClick={onConfirm}
-              className="flex-1 py-2.5 rounded-xl bg-[#FA5252] text-white text-[14px] font-semibold hover:bg-[#E03131] transition-colors"
-              style={{ fontFamily: 'var(--font-body)' }}
-            >
-              Delete
-            </button>
+            <button onClick={onCancel} className="flex-1 py-2.5 rounded-xl border border-[#E9ECEF] text-[14px] text-[#6C757D] hover:bg-[#F8F9FA] transition-colors" style={{ fontFamily: 'var(--font-body)' }}>Cancel</button>
+            <button onClick={onConfirm} className="flex-1 py-2.5 rounded-xl bg-[#FA5252] text-white text-[14px] font-semibold hover:bg-[#E03131] transition-colors" style={{ fontFamily: 'var(--font-body)' }}>Delete</button>
           </div>
         </div>
       </div>
@@ -312,103 +168,154 @@ function DeleteConfirmModal({
   );
 }
 
+// ─── Extra resource editor ────────────────────────────────────────────────────
+
+function ExtraResourceEditor({ entries, onChange }: { entries: ExtraResource[]; onChange: (entries: ExtraResource[]) => void }) {
+  return (
+    <div className="flex flex-col gap-3">
+      {entries.map((r, i) => (
+        <div key={r.id} className="flex flex-col gap-1.5 p-3 bg-[#F8F9FA] rounded-lg border border-[#E9ECEF]">
+          <div className="flex items-center justify-between mb-0.5">
+            <span className="text-[11px] text-[#ADB5BD] font-medium" style={{ fontFamily: 'var(--font-body)' }}>Resource {i + 1}</span>
+            <button onClick={() => onChange(entries.filter((_, j) => j !== i))} className="text-[#ADB5BD] hover:text-[#FA5252] transition-colors p-1">
+              <Trash2 className="size-3.5" strokeWidth={1.75} />
+            </button>
+          </div>
+          <input
+            value={r.title}
+            onChange={e => onChange(entries.map((x, j) => j === i ? { ...x, title: e.target.value } : x))}
+            placeholder="Title"
+            className="w-full px-3 py-2 rounded-lg border border-[#E9ECEF] focus:outline-none focus:border-[#00a79d] text-[13px] bg-white"
+            style={{ fontFamily: 'var(--font-body)' }}
+          />
+          <input
+            value={r.url}
+            onChange={e => onChange(entries.map((x, j) => j === i ? { ...x, url: e.target.value } : x))}
+            placeholder="https://…"
+            className="w-full px-3 py-2 rounded-lg border border-[#E9ECEF] focus:outline-none focus:border-[#00a79d] text-[13px] bg-white"
+            style={{ fontFamily: 'var(--font-body)' }}
+          />
+          <textarea
+            rows={2}
+            value={r.description}
+            onChange={e => onChange(entries.map((x, j) => j === i ? { ...x, description: e.target.value } : x))}
+            placeholder="Description (required)"
+            className="w-full px-3 py-2 rounded-lg border border-[#E9ECEF] focus:outline-none focus:border-[#00a79d] text-[13px] bg-white resize-none"
+            style={{ fontFamily: 'var(--font-body)' }}
+          />
+        </div>
+      ))}
+      <button
+        onClick={() => onChange([...entries, { id: `r-${Date.now()}`, title: '', url: '', description: '' }])}
+        className="flex items-center gap-1.5 text-[13px] text-[#00a79d] hover:underline w-fit"
+        style={{ fontFamily: 'var(--font-body)' }}
+      >
+        <Plus className="size-3.5" strokeWidth={2} /> Add resource
+      </button>
+    </div>
+  );
+}
+
+// ─── Field label ──────────────────────────────────────────────────────────────
+
+function Label({ children, required }: { children: React.ReactNode; required?: boolean }) {
+  return (
+    <span className="text-[11px] text-[#6C757D] font-semibold uppercase tracking-wide flex items-center gap-1" style={{ fontFamily: 'var(--font-body)' }}>
+      {children}
+      {required && <span className="text-[#FA5252] text-[10px]">*</span>}
+    </span>
+  );
+}
+
 // ─── Session Card ─────────────────────────────────────────────────────────────
 
 function SessionCard({
-  session,
-  isFirst,
-  isLast,
-  isMenuOpen,
-  isEditing,
-  isEditingAI,
-  isAuthor,
-  onOpenMenu,
-  onCloseMenu,
-  onStartEdit,
-  onSaveEdit,
-  onCancelEdit,
-  onDuplicate,
-  onMoveUp,
-  onMoveDown,
-  onRequestDelete,
-  onUpdate,
+  session, isFirst, isLast, isMenuOpen, isEditing, isAuthor, memberIds,
+  onOpenMenu, onCloseMenu, onStartEdit, onSaveEdit, onCancelEdit,
+  onDuplicate, onMoveUp, onMoveDown, onRequestDelete,
 }: {
-  session: Session;
-  isFirst: boolean;
-  isLast: boolean;
-  isMenuOpen: boolean;
-  isEditing: boolean;
-  isEditingAI: boolean;
-  isAuthor: boolean;
-  onOpenMenu: () => void;
-  onCloseMenu: () => void;
-  onStartEdit: (withAI: boolean) => void;
-  onSaveEdit: (updates: Partial<Session>) => void;
-  onCancelEdit: () => void;
-  onDuplicate: () => void;
-  onMoveUp: () => void;
-  onMoveDown: () => void;
+  session: Session; isFirst: boolean; isLast: boolean; isMenuOpen: boolean;
+  isEditing: boolean; isAuthor: boolean; memberIds: string[];
+  onOpenMenu: () => void; onCloseMenu: () => void; onStartEdit: () => void;
+  onSaveEdit: (updates: Partial<Session>) => void; onCancelEdit: () => void;
+  onDuplicate: () => void; onMoveUp: () => void; onMoveDown: () => void;
   onRequestDelete: () => void;
-  onUpdate: (updated: Session) => void;
 }) {
-  const [expanded, setExpanded] = useState(session.status === 'in-progress');
-  const [projectUrl, setProjectUrl] = useState(session.projectUrl ?? '');
-  const [reflectionNote, setNote] = useState(session.reflectionNote ?? '');
-  const [confidence, setConfidence] = useState(session.confidenceRating ?? 0);
-  const [savedProject, setSavedProject] = useState(!!session.projectUrl);
-  const [savedReflect, setSavedReflect] = useState(!!session.reflectionNote);
+  const [expanded, setExpanded] = useState(session.status === 'this-week');
 
-  // Inline edit state
-  const [editTitle,    setEditTitle]    = useState(session.title);
-  const [editDate,     setEditDate]     = useState(session.date);
-  const [editDuration, setEditDuration] = useState(String(session.duration));
-  const [editXP,       setEditXP]       = useState(String(session.xp));
-  const [editLevel,    setEditLevel]    = useState<BubbleLevel>(session.level);
-  const [editSections, setEditSections] = useState(session.sections);
+  // Edit state
+  const [editTitle,       setEditTitle]       = useState(session.title);
+  const [editDate,        setEditDate]        = useState(session.date);
+  const [editXP,          setEditXP]          = useState(String(session.xp));
+  const [editLevel,       setEditLevel]       = useState<BubbleLevel>(session.level);
+  const [editObjective,   setEditObjective]   = useState(session.learningObjective);
+  const [editLedBy,       setEditLedBy]       = useState(session.ledBy);
+  const [editPreMats,     setEditPreMats]     = useState(session.preMaterials ?? '');
+  const [editSections,    setEditSections]    = useState<SessionSection[]>(session.sections);
+  const [editHomework,    setEditHomework]    = useState(session.homework ?? '');
+  const [editSubTypes,    setEditSubTypes]    = useState<SubmissionType[]>(session.submissionTypes);
+  const [editResources,   setEditResources]   = useState<ExtraResource[]>(session.extraResources ?? []);
 
   useEffect(() => {
     if (isEditing) {
       setEditTitle(session.title);
       setEditDate(session.date);
-      setEditDuration(String(session.duration));
       setEditXP(String(session.xp));
       setEditLevel(session.level);
+      setEditObjective(session.learningObjective);
+      setEditLedBy(session.ledBy);
+      setEditPreMats(session.preMaterials ?? '');
       setEditSections(session.sections);
+      setEditHomework(session.homework ?? '');
+      setEditSubTypes(session.submissionTypes);
+      setEditResources(session.extraResources ?? []);
     }
   }, [isEditing]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  function updateSection(idx: number, patch: Partial<Session['sections'][number]>) {
+  function updateSection(idx: number, patch: Partial<SessionSection>) {
     setEditSections(ss => ss.map((s, i) => i === idx ? { ...s, ...patch } : s));
   }
 
-  const cfg = STATUS_CFG[session.status];
-  const isLocked = session.status === 'locked';
-  const sNum = `S${String(session.number).padStart(2, '0')}`;
-  const progress = session.status === 'done' ? 100 : session.status === 'in-progress' ? 45 : 0;
+  function moveSectionUp(idx: number) {
+    if (idx <= 0) return;
+    setEditSections(ss => { const n = [...ss]; [n[idx - 1], n[idx]] = [n[idx], n[idx - 1]]; return n; });
+  }
 
-  const cardBorder = isEditing
-    ? '2px solid #00a79d'
-    : '1px solid #E9ECEF';
+  function moveSectionDown(idx: number) {
+    setEditSections(ss => { if (idx >= ss.length - 1) return ss; const n = [...ss]; [n[idx], n[idx + 1]] = [n[idx + 1], n[idx]]; return n; });
+  }
+
+  function addSection() {
+    const ts = Date.now();
+    setEditSections(ss => [...ss, { id: `step-${ts}`, type: 'learn', title: 'Learn', minutes: 20 }]);
+  }
+
+  function toggleSubType(t: SubmissionType) {
+    setEditSubTypes(ts => ts.includes(t) ? ts.filter(x => x !== t) : [...ts, t]);
+  }
+
+  const cfg = STATUS_CFG[session.status];
+  const sNum = `S${String(session.number).padStart(2, '0')}`;
+  const ledByName = getMemberById(session.ledBy)?.name ?? session.ledBy;
+  const totalMinutes = session.sections.reduce((sum, s) => sum + s.minutes, 0);
 
   return (
     <div
       className="rounded-2xl"
       style={{
-        border: cardBorder,
+        border: isEditing ? '2px solid #00a79d' : '1px solid #E9ECEF',
         background: 'white',
         boxShadow: isEditing ? '0 0 0 4px rgba(43,191,170,0.12)' : 'var(--shadow-sm)',
-        opacity: isLocked && !isEditing ? 0.65 : 1,
         transition: 'border 0.2s, box-shadow 0.2s',
       }}
     >
-      {/* Header row */}
+      {/* ── Header row ─────────────────────────────────────────────────────── */}
       <div
-        className={`flex items-start gap-3 p-4 ${!isLocked && !isEditing ? 'cursor-pointer hover:bg-neutral-50' : ''}`}
-        onClick={() => !isLocked && !isEditing && setExpanded(e => !e)}
+        className={`flex items-start gap-3 p-4 ${!isEditing ? 'cursor-pointer hover:bg-neutral-50' : ''}`}
+        onClick={() => !isEditing && setExpanded(e => !e)}
       >
-        {/* Row 1: S-badge + title  |  Row 2: status · level · date */}
         <div className="flex-1 min-w-0">
-          {/* Row 1 — primary */}
+          {/* Row 1: badge + title */}
           <div className="flex items-center gap-2.5 mb-1.5">
             <div
               className="shrink-0 w-9 h-9 rounded-xl flex items-center justify-center font-bold text-[13px] text-white"
@@ -416,368 +323,414 @@ function SessionCard({
             >
               {sNum}
             </div>
-            {isEditing ? (
-              <input
-                value={editTitle}
-                onChange={e => setEditTitle(e.target.value)}
-                className="flex-1 font-semibold text-[16px] text-[#212529] px-2 py-1 rounded-lg border border-[#00a79d] focus:outline-none bg-[#F8FFFE]"
-                style={{ fontFamily: 'var(--font-display)' }}
-                placeholder="Session title"
-                onClick={e => e.stopPropagation()}
-              />
-            ) : (
-              <p className="font-bold text-[16px] text-[#212529] leading-snug" style={{ fontFamily: 'var(--font-display)' }}>
-                {session.title}
-              </p>
-            )}
+            <p className="font-bold text-[16px] text-[#212529] leading-snug" style={{ fontFamily: 'var(--font-display)' }}>
+              {session.title}
+            </p>
           </div>
-
-          {/* Row 2 — secondary meta (always visible, read-only) */}
-          <div className="flex items-center gap-2 flex-wrap pl-[2.875rem] mb-1">
+          {/* Row 2: meta pills */}
+          <div className="flex items-center gap-2 flex-wrap pl-[2.875rem]">
             <span
               className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full shrink-0"
               style={{ background: cfg.bg, color: cfg.color, fontFamily: 'var(--font-body)' }}
             >
               <cfg.icon className="size-3" strokeWidth={2} /> {cfg.label}
             </span>
-            <span className="text-[11px] px-2 py-0.5 rounded-full bg-[#F1F3F5] text-[#6C757D] shrink-0"
-              style={{ fontFamily: 'var(--font-body)' }}>
-              {isEditing ? editLevel : session.level}
-            </span>
-            <span className="text-[11px] text-[#6C757D] whitespace-nowrap" style={{ fontFamily: 'var(--font-body)' }}>
-              {isEditing
-                ? `${editDate || session.date} · ${editDuration || session.duration} min · ${editXP || session.xp} XP`
-                : `${session.date} · ${session.duration} min · ${session.xp} XP`}
+            <span className="text-[11px] text-[#6C757D]" style={{ fontFamily: 'var(--font-body)' }}>
+              {session.date} · {totalMinutes} min · {session.xp} XP
             </span>
           </div>
-
-          {isEditing ? (
-            <div className="flex flex-col gap-2 mt-2" onClick={e => e.stopPropagation()}>
-              {/* Date + Duration */}
-              <div className="grid grid-cols-3 gap-2">
-                <div className="flex flex-col gap-0.5 col-span-2">
-                  <label className="text-[10px] text-[#ADB5BD] font-medium px-1" style={{ fontFamily: 'var(--font-body)' }}>Date</label>
-                  <DatePicker value={editDate} onChange={setEditDate} />
-                </div>
-                <div className="flex flex-col gap-0.5">
-                  <label className="text-[10px] text-[#ADB5BD] font-medium px-1" style={{ fontFamily: 'var(--font-body)' }}>Duration (min)</label>
-                  <input
-                    type="number" min="1"
-                    value={editDuration}
-                    onChange={e => setEditDuration(e.target.value)}
-                    className="text-[13px] px-2 py-1.5 rounded-lg border border-[#E9ECEF] focus:outline-none focus:border-[#00a79d] bg-[#F8F9FA]"
-                    style={{ fontFamily: 'var(--font-body)' }}
-                  />
-                </div>
-              </div>
-              {/* XP + Level */}
-              <div className="grid grid-cols-2 gap-2">
-                <div className="flex flex-col gap-0.5">
-                  <label className="text-[10px] text-[#ADB5BD] font-medium px-1" style={{ fontFamily: 'var(--font-body)' }}>XP</label>
-                  <input
-                    type="number" min="0"
-                    value={editXP}
-                    onChange={e => setEditXP(e.target.value)}
-                    className="text-[13px] px-2 py-1.5 rounded-lg border border-[#E9ECEF] focus:outline-none focus:border-[#00a79d] bg-[#F8F9FA]"
-                    style={{ fontFamily: 'var(--font-body)' }}
-                  />
-                </div>
-                <div className="flex flex-col gap-0.5">
-                  <label className="text-[10px] text-[#ADB5BD] font-medium px-1" style={{ fontFamily: 'var(--font-body)' }}>Level</label>
-                  <select
-                    value={editLevel}
-                    onChange={e => setEditLevel(e.target.value as BubbleLevel)}
-                    className="text-[13px] px-2 py-1.5 rounded-lg border border-[#E9ECEF] focus:outline-none focus:border-[#00a79d] bg-[#F8F9FA]"
-                    style={{ fontFamily: 'var(--font-body)' }}
-                  >
-                    <option>Beginner</option>
-                    <option>Intermediate</option>
-                    <option>Advanced</option>
-                  </select>
-                </div>
-              </div>
-              {isEditingAI && (
-                <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-dashed border-[#ADB5BD] bg-[#F8F9FA] opacity-60 mt-1">
-                  <Sparkles className="size-4 text-[#ADB5BD] shrink-0" strokeWidth={1.75} />
-                  <span className="text-[12px] text-[#ADB5BD] italic" style={{ fontFamily: 'var(--font-body)' }}>
-                    AI editing coming soon
-                  </span>
-                </div>
-              )}
-            </div>
-          ) : null}
         </div>
 
-        {/* Right controls: ⋮ | ∨ */}
+        {/* Controls */}
         {!isEditing && (
           <div className="shrink-0 flex items-center gap-1" onClick={e => e.stopPropagation()}>
             {isAuthor && (
-              <ThreeDotsMenu
-                isOpen={isMenuOpen}
-                isLocked={isLocked}
-                isFirst={isFirst}
-                isLast={isLast}
-                onOpen={onOpenMenu}
-                onClose={onCloseMenu}
-                onEdit={() => onStartEdit(false)}
-                onEditAI={() => onStartEdit(true)}
-                onDuplicate={onDuplicate}
-                onMoveUp={onMoveUp}
-                onMoveDown={onMoveDown}
-                onDelete={onRequestDelete}
-              />
-            )}
-            {!isLocked && (
-              <button
-                onClick={e => { e.stopPropagation(); setExpanded(v => !v); }}
-                className="size-8 flex items-center justify-center text-[#4B5563] hover:text-[#212529] hover:bg-[#F8F9FA] rounded-lg transition-colors"
-              >
-                <ChevronDown
-                  className="size-4 transition-transform"
-                  strokeWidth={1.75}
-                  style={{ transform: expanded ? 'rotate(180deg)' : 'none' }}
+              <>
+                <button
+                  onClick={() => onStartEdit()}
+                  className="size-8 rounded-lg flex items-center justify-center text-[#4B5563] hover:text-[#212529] hover:bg-[#F8F9FA] transition-colors"
+                  title="Edit session"
+                >
+                  <Pencil className="size-4" strokeWidth={1.75} />
+                </button>
+                <ThreeDotsMenu
+                  isOpen={isMenuOpen} isFirst={isFirst} isLast={isLast}
+                  onOpen={onOpenMenu} onClose={onCloseMenu}
+                  onEdit={onStartEdit} onDuplicate={onDuplicate}
+                  onMoveUp={onMoveUp} onMoveDown={onMoveDown} onDelete={onRequestDelete}
                 />
-              </button>
+              </>
             )}
+            <button
+              onClick={e => { e.stopPropagation(); setExpanded(v => !v); }}
+              className="size-8 flex items-center justify-center text-[#4B5563] hover:text-[#212529] hover:bg-[#F8F9FA] rounded-lg transition-colors"
+            >
+              <ChevronDown className="size-4 transition-transform" strokeWidth={1.75} style={{ transform: expanded ? 'rotate(180deg)' : 'none' }} />
+            </button>
           </div>
         )}
       </div>
 
-      {/* Editable sections panel */}
-      {isEditing && (
-        <div className="border-t border-[#E9ECEF]" onClick={e => e.stopPropagation()}>
-          {editSections.map((section, idx) => {
-            const SectionIcon = SECTION_ICONS[section.type] ?? Pin;
-            const isReadOnly = section.type === 'ai-eval' || section.type === 'reflection';
-
-            return (
-              <div
-                key={section.id}
-                className={`px-5 py-3.5 border-b border-[#F8F9FA] last:border-0 ${isReadOnly ? 'opacity-40' : ''}`}
-              >
-                <div className="flex items-center gap-2 mb-2">
-                  <SectionIcon className={`size-4 shrink-0 ${isReadOnly ? 'text-[#ADB5BD]' : 'text-[#00a79d]'}`} strokeWidth={1.75} />
-                  <p className="text-[13px] font-semibold text-[#212529]" style={{ fontFamily: 'var(--font-display)' }}>
-                    {section.title}
-                  </p>
-                  {isReadOnly && (
-                    <span className="ml-auto text-[11px] text-[#ADB5BD]" style={{ fontFamily: 'var(--font-body)' }}>
-                      Member only
-                    </span>
-                  )}
-                </div>
-
-                {isReadOnly && (
-                  <p className="text-[12px] text-[#ADB5BD] italic" style={{ fontFamily: 'var(--font-body)' }}>
-                    {section.type === 'ai-eval' ? 'AI feedback is generated after project submission.' : 'Members fill this in after each session.'}
-                  </p>
-                )}
-
-                {!isReadOnly && (section.type === 'learning-path' || section.type === 'brief' || section.type === 'sandbox') && (
-                  <textarea
-                    rows={3}
-                    value={section.content ?? ''}
-                    onChange={e => updateSection(idx, { content: e.target.value })}
-                    placeholder={
-                      section.type === 'sandbox'
-                        ? 'Describe the project task for this session…'
-                        : 'Enter content…'
-                    }
-                    className="w-full px-3 py-2 rounded-lg border border-[#E9ECEF] focus:outline-none focus:border-[#00a79d] text-[13px] bg-[#F8F9FA] resize-none"
-                    style={{ fontFamily: 'var(--font-body)' }}
-                  />
-                )}
-
-                {!isReadOnly && section.type === 'video' && (
-                  <VideoListEditor
-                    entries={
-                      section.videos?.length
-                        ? section.videos
-                        : section.videoUrl
-                          ? [{ id: 'v0', title: section.videoTitle ?? '', url: section.videoUrl }]
-                          : []
-                    }
-                    onChange={videos => updateSection(idx, {
-                      videos,
-                      videoTitle: videos[0]?.title ?? '',
-                      videoUrl: videos[0]?.url ?? '',
-                    })}
-                  />
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Inline edit footer */}
-      {isEditing && (
-        <div
-          className="px-4 py-3 border-t border-[#E9ECEF] flex items-center justify-end gap-2.5"
-          onClick={e => e.stopPropagation()}
-        >
-          <button
-            onClick={onCancelEdit}
-            className="px-4 py-2 rounded-xl border border-[#E9ECEF] text-[13px] text-[#6C757D] hover:bg-[#F8F9FA] transition-colors"
-            style={{ fontFamily: 'var(--font-body)' }}
-          >
-            Cancel
-          </button>
-          <button
-            onClick={() => onSaveEdit({
-              title:    editTitle.trim()    || session.title,
-              date:     editDate.trim()     || session.date,
-              duration: parseInt(editDuration) || session.duration,
-              xp:       parseInt(editXP)       || session.xp,
-              level:    editLevel,
-              sections: editSections,
-            })}
-            className="px-4 py-2 rounded-xl bg-[#00a79d] text-white text-[13px] font-semibold hover:bg-[#008f86] transition-colors"
-            style={{ fontFamily: 'var(--font-body)' }}
-          >
-            Save
-          </button>
-        </div>
-      )}
-
-      {/* Progress bar */}
+      {/* ── Progress bar ───────────────────────────────────────────────────── */}
       {!isEditing && (
         <div className="h-1 bg-[#F1F3F5]">
-          <div
-            className="h-full rounded-full transition-all duration-700"
-            style={{ width: `${progress}%`, background: '#00a79d' }}
+          <div className="h-full rounded-full transition-all duration-700"
+            style={{ width: session.status === 'done' ? '100%' : session.status === 'this-week' ? '45%' : '0%', background: '#00a79d' }}
           />
         </div>
       )}
 
-      {/* Expanded sections */}
-      {expanded && !isLocked && !isEditing && (
-        <div className="border-t border-[#F1F3F5]">
-          {session.sections.filter(s => s.type !== 'ai-eval' && s.type !== 'reflection').map(section => {
-            const SectionIcon = SECTION_ICONS[section.type] ?? Pin;
-            return (
-              <div key={section.id} className="border-b border-[#F8F9FA] last:border-0 px-5 py-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <SectionIcon className="size-4 text-[#00a79d]" strokeWidth={1.75} />
-                  <p className="font-semibold text-[14px] text-[#212529]" style={{ fontFamily: 'var(--font-display)' }}>
-                    {section.title}
-                  </p>
+      {/* ── Expanded read view ─────────────────────────────────────────────── */}
+      {expanded && !isEditing && (
+        <div className="border-t border-[#F1F3F5] px-5 py-4 flex flex-col gap-4">
+
+          {/* Learning objective */}
+          <div className="flex flex-col gap-1">
+            <p className="text-[11px] text-[#ADB5BD] font-semibold uppercase tracking-wide" style={{ fontFamily: 'var(--font-body)' }}>
+              By the end, we'll be able to…
+            </p>
+            <p className="text-[15px] font-semibold text-[#212529] leading-snug" style={{ fontFamily: 'var(--font-display)' }}>
+              {session.learningObjective || <span className="text-[#ADB5BD] italic font-normal">No learning objective set</span>}
+            </p>
+          </div>
+
+          {/* Led by + meta */}
+          <div className="flex flex-wrap items-center gap-2">
+            {(() => {
+              const member = getMemberById(session.ledBy);
+              return member ? (
+                <div className="flex items-center gap-1.5">
+                  <img src={member.avatar} alt={member.name} className="size-5 rounded-full object-cover" />
+                  <span className="text-[12px] text-[#495057]" style={{ fontFamily: 'var(--font-body)' }}>
+                    Led by <strong>{member.name}</strong>
+                  </span>
                 </div>
+              ) : null;
+            })()}
+          </div>
 
-                {(section.type === 'learning-path' || section.type === 'brief') && section.content && (
-                  <p className="text-[13px] text-[#495057] leading-relaxed" style={{ fontFamily: 'var(--font-body)' }}>
-                    {section.content}
-                  </p>
-                )}
+          {/* Pre-materials */}
+          {session.preMaterials && (
+            <div className="bg-[#FFFBEB] border border-[#FDE68A] rounded-xl px-4 py-3">
+              <p className="text-[11px] text-[#92400E] font-semibold uppercase tracking-wide mb-1" style={{ fontFamily: 'var(--font-body)' }}>Before we meet</p>
+              <p className="text-[13px] text-[#78350F]" style={{ fontFamily: 'var(--font-body)' }}>{session.preMaterials}</p>
+            </div>
+          )}
 
-                {section.type === 'video' && (
-                  <div className="flex flex-col gap-3">
-                    {(section.videos?.length
-                      ? section.videos
-                      : section.videoUrl
-                        ? [{ id: 'v0', title: section.videoTitle ?? '', url: section.videoUrl }]
-                        : []
-                    ).map((v, vi) => (
-                      <div key={v.id ?? vi}>
-                        {v.title && (
-                          <p className="text-[13px] text-[#495057] mb-1" style={{ fontFamily: 'var(--font-body)' }}>
-                            {v.title}
-                          </p>
-                        )}
-                        {v.url && (
-                          <a href={v.url} target="_blank" rel="noopener noreferrer"
-                            className="inline-flex items-center gap-2 text-[13px] text-[#00a79d] font-medium hover:underline"
-                            style={{ fontFamily: 'var(--font-body)' }}>
-                            <svg className="size-4 shrink-0" fill="none" viewBox="0 0 20 20">
-                              <path d="M8 5.14v9.72L15.5 10 8 5.14z" fill="#00a79d" />
-                              <circle cx="10" cy="10" r="8" stroke="#00a79d" strokeWidth="1.5" />
-                            </svg>
-                            Watch on YouTube
-                          </a>
-                        )}
+          {/* During the meeting */}
+          {session.sections.length > 0 && (
+            <div className="flex flex-col gap-0.5">
+              <p className="text-[11px] text-[#ADB5BD] font-semibold uppercase tracking-wide mb-1.5" style={{ fontFamily: 'var(--font-body)' }}>During the meeting</p>
+              {session.sections.map(section => {
+                const SectionIcon = SECTION_ICONS[section.type] ?? Target;
+                return (
+                  <div key={section.id} className="flex gap-3 px-3 py-3 rounded-xl hover:bg-[#F8F9FA] transition-colors">
+                    <div className="mt-0.5 shrink-0 size-7 rounded-lg bg-[#E5F5F4] flex items-center justify-center">
+                      <SectionIcon className="size-3.5 text-[#00a79d]" strokeWidth={1.75} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <p className="text-[13px] font-semibold text-[#212529]" style={{ fontFamily: 'var(--font-display)' }}>{section.title}</p>
+                        <span className="text-[11px] text-[#ADB5BD]" style={{ fontFamily: 'var(--font-body)' }}>{section.minutes} min</span>
                       </div>
-                    ))}
+                      {section.whatHappens && (
+                        <p className="text-[13px] text-[#495057] leading-relaxed" style={{ fontFamily: 'var(--font-body)' }}>{section.whatHappens}</p>
+                      )}
+                      {section.notes && (
+                        <p className="text-[12px] text-[#6C757D] italic mt-0.5" style={{ fontFamily: 'var(--font-body)' }}>{section.notes}</p>
+                      )}
+                    </div>
                   </div>
-                )}
+                );
+              })}
+            </div>
+          )}
 
-                {section.type === 'sandbox' && (
-                  <div className="flex flex-col gap-3">
-                    {section.content && (
-                      <p className="text-[13px] text-[#495057]" style={{ fontFamily: 'var(--font-body)' }}>
-                        {section.content}
-                      </p>
-                    )}
-                    <div className="flex gap-2">
+          {/* Until next time */}
+          <div className="border-t border-[#F1F3F5] pt-4 flex flex-col gap-3">
+            <p className="text-[11px] text-[#ADB5BD] font-semibold uppercase tracking-wide" style={{ fontFamily: 'var(--font-body)' }}>Until next time</p>
+
+            {session.homework ? (
+              <p className="text-[13px] text-[#495057] leading-relaxed" style={{ fontFamily: 'var(--font-body)' }}>{session.homework}</p>
+            ) : (
+              <p className="text-[13px] text-[#ADB5BD] italic" style={{ fontFamily: 'var(--font-body)' }}>No homework set for this session.</p>
+            )}
+
+            {session.submissionTypes.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                <p className="w-full text-[11px] text-[#6C757D]" style={{ fontFamily: 'var(--font-body)' }}>Submit via:</p>
+                {session.submissionTypes.map(t => {
+                  const sub = SUBMISSION_CFG.find(c => c.type === t);
+                  if (!sub) return null;
+                  const SubIcon = sub.icon;
+                  return (
+                    <span key={t} className="inline-flex items-center gap-1 text-[12px] font-medium px-2.5 py-1 rounded-lg bg-[#E5F5F4] text-[#008f86]" style={{ fontFamily: 'var(--font-body)' }}>
+                      <SubIcon className="size-3.5" strokeWidth={1.75} /> {sub.label}
+                    </span>
+                  );
+                })}
+              </div>
+            )}
+
+            {(session.extraResources ?? []).length > 0 && (
+              <div className="flex flex-col gap-2">
+                <p className="text-[11px] text-[#6C757D]" style={{ fontFamily: 'var(--font-body)' }}>Extra resources:</p>
+                {(session.extraResources ?? []).map(r => (
+                  <div key={r.id} className="flex flex-col gap-0.5">
+                    <a href={r.url} target="_blank" rel="noopener noreferrer" className="text-[13px] text-[#00a79d] font-medium hover:underline" style={{ fontFamily: 'var(--font-body)' }}>
+                      {r.title}
+                    </a>
+                    <p className="text-[12px] text-[#6C757D]" style={{ fontFamily: 'var(--font-body)' }}>{r.description}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Edit view ──────────────────────────────────────────────────────── */}
+      {isEditing && (
+        <div className="border-t border-[#E9ECEF]" onClick={e => e.stopPropagation()}>
+          <div className="px-5 py-4 flex flex-col gap-4">
+
+            {/* Title + Date */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="col-span-2 sm:col-span-1 flex flex-col gap-1">
+                <Label required>Session title</Label>
+                <input
+                  value={editTitle}
+                  onChange={e => setEditTitle(e.target.value)}
+                  placeholder="Session title"
+                  className="px-3 py-2 rounded-lg border border-[#E9ECEF] focus:outline-none focus:border-[#00a79d] text-[14px] bg-[#F8F9FA]"
+                  style={{ fontFamily: 'var(--font-body)' }}
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <Label required>Date</Label>
+                <input
+                  type="date"
+                  value={editDate}
+                  onChange={e => setEditDate(e.target.value)}
+                  className="px-3 py-2 rounded-lg border border-[#E9ECEF] focus:outline-none focus:border-[#00a79d] text-[14px] bg-[#F8F9FA]"
+                  style={{ fontFamily: 'var(--font-body)' }}
+                />
+              </div>
+            </div>
+
+            {/* XP + Level */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="flex flex-col gap-1">
+                <Label>XP</Label>
+                <input
+                  type="number" min="0"
+                  value={editXP}
+                  onChange={e => setEditXP(e.target.value)}
+                  className="px-3 py-2 rounded-lg border border-[#E9ECEF] focus:outline-none focus:border-[#00a79d] text-[13px] bg-[#F8F9FA]"
+                  style={{ fontFamily: 'var(--font-body)' }}
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <Label>Level</Label>
+                <select
+                  value={editLevel}
+                  onChange={e => setEditLevel(e.target.value as BubbleLevel)}
+                  className="px-3 py-2 rounded-lg border border-[#E9ECEF] focus:outline-none focus:border-[#00a79d] text-[13px] bg-[#F8F9FA]"
+                  style={{ fontFamily: 'var(--font-body)' }}
+                >
+                  <option>Beginner</option>
+                  <option>Intermediate</option>
+                  <option>Advanced</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Learning Objective */}
+            <div className="flex flex-col gap-1">
+              <Label required>By the end, we'll be able to…</Label>
+              <textarea
+                rows={2}
+                value={editObjective}
+                onChange={e => setEditObjective(e.target.value)}
+                placeholder="One sentence. Start with a verb: write, build, compare, choose."
+                className="px-3 py-2 rounded-lg border border-[#E9ECEF] focus:outline-none focus:border-[#00a79d] text-[13px] bg-[#F8F9FA] resize-none"
+                style={{ fontFamily: 'var(--font-body)' }}
+              />
+            </div>
+
+            {/* Led By */}
+            <div className="flex flex-col gap-1">
+              <Label required>Led by</Label>
+              <select
+                value={editLedBy}
+                onChange={e => setEditLedBy(e.target.value)}
+                className="px-3 py-2 rounded-lg border border-[#E9ECEF] focus:outline-none focus:border-[#00a79d] text-[13px] bg-[#F8F9FA]"
+                style={{ fontFamily: 'var(--font-body)' }}
+              >
+                {memberIds.map(id => {
+                  const m = getMemberById(id);
+                  return <option key={id} value={id}>{m?.name ?? id}</option>;
+                })}
+              </select>
+            </div>
+
+            {/* Pre-materials */}
+            <div className="flex flex-col gap-1">
+              <Label>Before we meet</Label>
+              <textarea
+                rows={2}
+                value={editPreMats}
+                onChange={e => setEditPreMats(e.target.value)}
+                placeholder="Readings, videos, or prep to do before we meet."
+                className="px-3 py-2 rounded-lg border border-[#E9ECEF] focus:outline-none focus:border-[#00a79d] text-[13px] bg-[#F8F9FA] resize-none"
+                style={{ fontFamily: 'var(--font-body)' }}
+              />
+            </div>
+
+            {/* Steps */}
+            <div className="flex flex-col gap-2">
+              <Label>During the meeting</Label>
+              {editSections.map((section, idx) => {
+                const SectionIcon = SECTION_ICONS[section.type] ?? Target;
+                return (
+                  <div key={section.id} className="flex flex-col gap-2 p-3 bg-[#F8F9FA] rounded-xl border border-[#E9ECEF]">
+                    {/* Row 1: type, title, minutes, arrows */}
+                    <div className="flex items-center gap-2">
+                      <SectionIcon className="size-4 text-[#00a79d] shrink-0" strokeWidth={1.75} />
+                      <select
+                        value={section.type}
+                        onChange={e => updateSection(idx, { type: e.target.value as SectionType, title: SECTION_TYPE_LABELS[e.target.value as SectionType] })}
+                        className="text-[12px] px-2 py-1 rounded-lg border border-[#E9ECEF] focus:outline-none focus:border-[#00a79d] bg-white"
+                        style={{ fontFamily: 'var(--font-body)' }}
+                      >
+                        {(Object.keys(SECTION_TYPE_LABELS) as SectionType[]).map(t => (
+                          <option key={t} value={t}>{SECTION_TYPE_LABELS[t]}</option>
+                        ))}
+                      </select>
                       <input
-                        type="url" value={projectUrl} onChange={e => setProjectUrl(e.target.value)}
-                        placeholder="https://your-project-url.com"
-                        className="flex-1 px-3 py-2 rounded-lg border border-[#E9ECEF] text-[13px] bg-[#F8F9FA] focus:outline-none focus:border-[#00a79d]"
+                        value={section.title}
+                        onChange={e => updateSection(idx, { title: e.target.value })}
+                        placeholder="Step title"
+                        className="flex-1 min-w-0 text-[13px] px-2 py-1 rounded-lg border border-[#E9ECEF] focus:outline-none focus:border-[#00a79d] bg-white"
                         style={{ fontFamily: 'var(--font-body)' }}
                       />
-                      <button
-                        onClick={() => { setSavedProject(true); onUpdate({ ...session, projectUrl }); }}
-                        className="px-4 py-2 rounded-lg bg-[#00a79d] text-white text-[13px] font-medium hover:bg-[#008f86] transition-colors"
-                        style={{ fontFamily: 'var(--font-body)' }}>
-                        {savedProject ? <><Check className="size-3.5 inline" strokeWidth={2.5} /> Saved</> : 'Submit'}
+                      <input
+                        type="number" min="1"
+                        value={section.minutes}
+                        onChange={e => updateSection(idx, { minutes: parseInt(e.target.value) || 1 })}
+                        className="w-14 text-[13px] px-2 py-1 rounded-lg border border-[#E9ECEF] focus:outline-none focus:border-[#00a79d] bg-white text-center"
+                        style={{ fontFamily: 'var(--font-body)' }}
+                      />
+                      <span className="text-[11px] text-[#ADB5BD] shrink-0" style={{ fontFamily: 'var(--font-body)' }}>min <span className="text-[#FA5252]">*</span></span>
+                      <div className="flex flex-col shrink-0">
+                        <button onClick={() => moveSectionUp(idx)} disabled={idx === 0} className="p-0.5 text-[#ADB5BD] hover:text-[#212529] disabled:opacity-30 transition-colors">
+                          <ChevronUp className="size-3.5" strokeWidth={2} />
+                        </button>
+                        <button onClick={() => moveSectionDown(idx)} disabled={idx === editSections.length - 1} className="p-0.5 text-[#ADB5BD] hover:text-[#212529] disabled:opacity-30 transition-colors">
+                          <ChevronDown className="size-3.5" strokeWidth={2} />
+                        </button>
+                      </div>
+                      <button onClick={() => setEditSections(ss => ss.filter((_, j) => j !== idx))} className="p-1 text-[#ADB5BD] hover:text-[#FA5252] transition-colors">
+                        <Trash2 className="size-3.5" strokeWidth={1.75} />
                       </button>
                     </div>
-                  </div>
-                )}
-
-                {section.type === 'ai-eval' && (
-                  section.content ? (
-                    <div className="flex items-start gap-2 bg-[#E5F5F4] rounded-xl p-3 text-[13px] text-[#008f86]"
-                      style={{ fontFamily: 'var(--font-body)' }}>
-                      <Bot className="size-4 shrink-0 mt-0.5" strokeWidth={1.75} />
-                      {section.content}
-                    </div>
-                  ) : (
-                    <p className="text-[13px] text-[#ADB5BD] italic" style={{ fontFamily: 'var(--font-body)' }}>
-                      Submit your project above to receive AI feedback.
-                    </p>
-                  )
-                )}
-
-                {section.type === 'reflection' && (
-                  <div className="flex flex-col gap-3">
-                    <div>
-                      <p className="text-[13px] text-[#495057] mb-2" style={{ fontFamily: 'var(--font-body)' }}>
-                        Confidence level (1–5):
-                      </p>
-                      <div className="flex gap-2">
-                        {[1,2,3,4,5].map(n => (
-                          <button key={n} onClick={() => setConfidence(n)}
-                            className="size-9 rounded-full border text-[14px] font-semibold transition-all"
-                            style={{
-                              fontFamily: 'var(--font-body)',
-                              background: confidence >= n ? '#00a79d' : 'white',
-                              borderColor: confidence >= n ? '#00a79d' : '#E9ECEF',
-                              color: confidence >= n ? 'white' : '#ADB5BD',
-                            }}>
-                            {n}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
+                    {/* Row 2: what happens */}
                     <textarea
-                      rows={3}
-                      value={reflectionNote}
-                      onChange={e => setNote(e.target.value)}
-                      placeholder="What challenged you most? What did you learn?"
-                      className="px-3 py-2 rounded-lg border border-[#E9ECEF] text-[13px] bg-[#F8F9FA] focus:outline-none focus:border-[#00a79d] resize-none"
+                      rows={2}
+                      value={section.whatHappens ?? ''}
+                      onChange={e => updateSection(idx, { whatHappens: e.target.value })}
+                      placeholder="What happens in this step…"
+                      className="w-full px-3 py-2 rounded-lg border border-[#E9ECEF] focus:outline-none focus:border-[#00a79d] text-[12px] bg-white resize-none"
                       style={{ fontFamily: 'var(--font-body)' }}
                     />
-                    <button
-                      onClick={() => { setSavedReflect(true); onUpdate({ ...session, reflectionNote, confidenceRating: confidence }); }}
-                      className="self-end px-4 py-2 rounded-lg bg-[#00a79d] text-white text-[13px] font-medium hover:bg-[#008f86] transition-colors"
-                      style={{ fontFamily: 'var(--font-body)' }}>
-                      {savedReflect ? <><Check className="size-3.5 inline" strokeWidth={2.5} /> Saved</> : 'Save reflection'}
-                    </button>
+                    {/* Row 3: notes */}
+                    <textarea
+                      rows={1}
+                      value={section.notes ?? ''}
+                      onChange={e => updateSection(idx, { notes: e.target.value })}
+                      placeholder="Notes for yourself…"
+                      className="w-full px-3 py-2 rounded-lg border border-[#E9ECEF] focus:outline-none focus:border-[#00a79d] text-[12px] bg-white resize-none"
+                      style={{ fontFamily: 'var(--font-body)' }}
+                    />
                   </div>
-                )}
+                );
+              })}
+              <button
+                onClick={addSection}
+                className="flex items-center gap-1.5 text-[13px] text-[#00a79d] hover:underline w-fit"
+                style={{ fontFamily: 'var(--font-body)' }}
+              >
+                <Plus className="size-3.5" strokeWidth={2} /> Add step
+              </button>
+            </div>
+
+            {/* Until next time */}
+            <div className="flex flex-col gap-3 border-t border-[#F1F3F5] pt-4">
+              <p className="text-[11px] text-[#6C757D] font-semibold uppercase tracking-wide" style={{ fontFamily: 'var(--font-body)' }}>Until next time</p>
+
+              <div className="flex flex-col gap-1">
+                <Label>Homework</Label>
+                <textarea
+                  rows={3}
+                  value={editHomework}
+                  onChange={e => setEditHomework(e.target.value)}
+                  placeholder="A concrete deliverable members can share at the next meeting."
+                  className="px-3 py-2 rounded-lg border border-[#E9ECEF] focus:outline-none focus:border-[#00a79d] text-[13px] bg-[#F8F9FA] resize-none"
+                  style={{ fontFamily: 'var(--font-body)' }}
+                />
               </div>
-            );
-          })}
+
+              <div className="flex flex-col gap-2">
+                <Label>Submit via</Label>
+                <div className="flex flex-wrap gap-2">
+                  {SUBMISSION_CFG.map(({ type, label, icon: SubIcon }) => (
+                    <label key={type} className="flex items-center gap-1.5 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={editSubTypes.includes(type)}
+                        onChange={() => toggleSubType(type)}
+                        className="accent-[#00a79d]"
+                      />
+                      <SubIcon className="size-3.5 text-[#6C757D]" strokeWidth={1.75} />
+                      <span className="text-[13px] text-[#495057]" style={{ fontFamily: 'var(--font-body)' }}>{label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <Label>Extra resources</Label>
+                <ExtraResourceEditor entries={editResources} onChange={setEditResources} />
+              </div>
+            </div>
+          </div>
+
+          {/* Save / Cancel */}
+          <div className="px-5 py-3 border-t border-[#E9ECEF] flex items-center justify-end gap-2.5">
+            <button
+              onClick={onCancelEdit}
+              className="px-4 py-2 rounded-xl border border-[#E9ECEF] text-[13px] text-[#6C757D] hover:bg-[#F8F9FA] transition-colors"
+              style={{ fontFamily: 'var(--font-body)' }}
+            >Cancel</button>
+            <button
+              onClick={() => onSaveEdit({
+                title:            editTitle.trim() || session.title,
+                date:             editDate.trim() || session.date,
+                xp:               parseInt(editXP) || session.xp,
+                level:            editLevel,
+                learningObjective: editObjective.trim(),
+                ledBy:            editLedBy,
+                preMaterials:     editPreMats.trim() || undefined,
+                sections:         editSections,
+                homework:         editHomework.trim() || undefined,
+                submissionTypes:  editSubTypes,
+                extraResources:   editResources.filter(r => r.title || r.url),
+                duration:         editSections.reduce((sum, s) => sum + s.minutes, 0),
+              })}
+              className="px-4 py-2 rounded-xl bg-[#00a79d] text-white text-[13px] font-semibold hover:bg-[#008f86] transition-colors"
+              style={{ fontFamily: 'var(--font-body)' }}
+            >Save</button>
+          </div>
         </div>
       )}
     </div>
@@ -794,99 +747,62 @@ interface Props {
 
 export function SyllabusTab({ bubble, isFounder, isAuthor = true }: Props) {
   const [sessions, setSessions] = useState<Session[]>(bubble.sessions);
-  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editingWithAI, setEditingWithAI] = useState(false);
+  const [openMenuId, setOpenMenuId]   = useState<string | null>(null);
+  const [editingId, setEditingId]     = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ session: Session; index: number } | null>(null);
 
-  const doneCount = sessions.filter(s => s.status === 'done').length;
-  const totalXP = sessions.reduce((sum, s) => sum + s.xp, 0);
-  const earnedXP = sessions.filter(s => s.status === 'done').reduce((sum, s) => sum + s.xp, 0);
+  const doneCount  = sessions.filter(s => s.status === 'done').length;
+  const totalXP    = sessions.reduce((sum, s) => sum + s.xp, 0);
+  const earnedXP   = sessions.filter(s => s.status === 'done').reduce((sum, s) => sum + s.xp, 0);
   const progressPct = sessions.length > 0 ? Math.round((doneCount / sessions.length) * 100) : 0;
 
   function reflowNumbers(ss: Session[]): Session[] {
     return ss.map((s, i) => ({ ...s, number: i + 1 }));
   }
 
-  function addSessionAndEdit() {
+  function addSession() {
     const ts = Date.now();
-    const nowDate = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    const today = new Date().toISOString().split('T')[0];
     const newId = `session-${ts}`;
     const newSession: Session = {
       id: newId,
       number: sessions.length + 1,
       title: 'New Session',
-      status: 'in-progress',
-      date: nowDate,
+      status: 'draft',
+      date: today,
       duration: 90,
       xp: 100,
       level: 'Intermediate',
-      sections: [
-        { id: `s-lp-${ts}`, type: 'learning-path', title: 'Learning Path', content: '' },
-        { id: `s-br-${ts}`, type: 'brief', title: 'Conceptual Brief', content: '' },
-        { id: `s-vd-${ts}`, type: 'video', title: 'Video Resources', videos: [] },
-        { id: `s-sb-${ts}`, type: 'sandbox', title: 'Project Sandbox', content: '' },
-      ],
+      learningObjective: '',
+      ledBy: bubble.founderId,
+      submissionTypes: ['link'],
+      sections: SEED_SECTIONS.map((s, i) => ({ ...s, id: `${newId}-s${i}` })),
     };
     setSessions(ss => [...ss, newSession]);
     setEditingId(newId);
-    setEditingWithAI(false);
-  }
-
-  function startEdit(id: string, withAI: boolean) {
-    setEditingId(id);
-    setEditingWithAI(withAI);
-    setOpenMenuId(null);
   }
 
   function saveEdit(id: string, updates: Partial<Session>) {
     setSessions(ss => ss.map(s => s.id === id ? { ...s, ...updates } : s));
     setEditingId(null);
-    setEditingWithAI(false);
-  }
-
-  function cancelEdit() {
-    setEditingId(null);
-    setEditingWithAI(false);
   }
 
   function duplicate(id: string) {
     const idx = sessions.findIndex(s => s.id === id);
     if (idx === -1) return;
     const orig = sessions[idx];
-    const copy: Session = {
-      ...orig,
-      id: `s-copy-${Date.now()}`,
-      title: `${orig.title} (Copy)`,
-      status: 'locked',
-    };
-    setSessions(ss => {
-      const next = [...ss];
-      next.splice(idx + 1, 0, copy);
-      return reflowNumbers(next);
-    });
-    toast('Section duplicated.');
+    const copy: Session = { ...orig, id: `s-copy-${Date.now()}`, title: `${orig.title} (Copy)`, status: 'draft' };
+    setSessions(ss => { const next = [...ss]; next.splice(idx + 1, 0, copy); return reflowNumbers(next); });
+    toast('Session duplicated.');
   }
 
   function moveUp(id: string) {
-    setSessions(ss => {
-      const idx = ss.findIndex(s => s.id === id);
-      if (idx <= 0) return ss;
-      const next = [...ss];
-      [next[idx - 1], next[idx]] = [next[idx], next[idx - 1]];
-      return reflowNumbers(next);
-    });
+    setSessions(ss => { const idx = ss.findIndex(s => s.id === id); if (idx <= 0) return ss; const next = [...ss]; [next[idx - 1], next[idx]] = [next[idx], next[idx - 1]]; return reflowNumbers(next); });
     setOpenMenuId(null);
   }
 
   function moveDown(id: string) {
-    setSessions(ss => {
-      const idx = ss.findIndex(s => s.id === id);
-      if (idx >= ss.length - 1) return ss;
-      const next = [...ss];
-      [next[idx], next[idx + 1]] = [next[idx + 1], next[idx]];
-      return reflowNumbers(next);
-    });
+    setSessions(ss => { const idx = ss.findIndex(s => s.id === id); if (idx >= ss.length - 1) return ss; const next = [...ss]; [next[idx], next[idx + 1]] = [next[idx + 1], next[idx]]; return reflowNumbers(next); });
     setOpenMenuId(null);
   }
 
@@ -904,9 +820,8 @@ export function SyllabusTab({ bubble, isFounder, isAuthor = true }: Props) {
     setDeleteTarget(null);
 
     let undone = false;
-    const timerId = setTimeout(() => { /* soft-deleted — stays removed */ }, 5000);
-
-    toast('Section deleted.', {
+    const timerId = setTimeout(() => { /* soft-deleted */ }, 5000);
+    toast('Session deleted.', {
       duration: 5000,
       action: {
         label: 'Undo',
@@ -914,11 +829,7 @@ export function SyllabusTab({ bubble, isFounder, isAuthor = true }: Props) {
           if (undone) return;
           undone = true;
           clearTimeout(timerId);
-          setSessions(ss => {
-            const next = [...ss];
-            next.splice(Math.min(origIdx, next.length), 0, removed);
-            return reflowNumbers(next);
-          });
+          setSessions(ss => { const next = [...ss]; next.splice(Math.min(origIdx, next.length), 0, removed); return reflowNumbers(next); });
         },
       },
     });
@@ -926,62 +837,41 @@ export function SyllabusTab({ bubble, isFounder, isAuthor = true }: Props) {
 
   return (
     <div className="flex flex-col gap-5">
+
       {/* Top Banner */}
-      <div className="rounded-2xl px-5 pt-5 pb-4 text-white"
-        style={{ background: 'linear-gradient(135deg, #00a79d 0%, #008f86 100%)' }}>
+      <div className="rounded-2xl px-5 pt-5 pb-4 text-white" style={{ background: 'linear-gradient(135deg, #00a79d 0%, #008f86 100%)' }}>
         <div className="flex items-end gap-4">
           <div className="flex-1">
-            {/* Session count + % */}
             <div className="flex items-baseline justify-between mb-2">
               <p className="text-[13px] font-semibold text-white" style={{ fontFamily: 'var(--font-body)' }}>
                 {sessions.length === 0
                   ? 'No sessions yet'
                   : doneCount === 0
-                    ? `0 of ${sessions.length} sessions · Ready to start`
-                    : `${doneCount} of ${sessions.length} sessions done`}
+                    ? `0 of ${sessions.length} sessions · Get started`
+                    : doneCount === sessions.length
+                      ? `All ${sessions.length} sessions done`
+                      : `${doneCount} of ${sessions.length} sessions done`}
               </p>
               {sessions.length > 0 && (
-                <span className="text-[13px] font-semibold text-white ml-3 shrink-0" style={{ fontFamily: 'var(--font-body)' }}>
-                  {progressPct}%
-                </span>
+                <span className="text-[13px] font-semibold text-white ml-3 shrink-0" style={{ fontFamily: 'var(--font-body)' }}>{progressPct}%</span>
               )}
             </div>
-            {/* Progress bar — bottom of banner */}
             <div className="bg-white/30 rounded-full h-2 w-full">
               <div className="h-full rounded-full bg-white transition-all duration-700" style={{ width: `${progressPct}%` }} />
             </div>
           </div>
-          {/* XP box — hidden when no sessions */}
           {totalXP > 0 && (
-            <div className="bg-white/15 rounded-2xl px-4 py-3 text-center shrink-0 mb-0">
+            <div className="bg-white/15 rounded-2xl px-4 py-3 text-center shrink-0">
               <p className="text-[11px] text-white font-semibold mb-0.5" style={{ fontFamily: 'var(--font-body)' }}>XP</p>
-              <p className="text-[20px] font-bold leading-tight" style={{ fontFamily: 'var(--font-display)' }}>
-                {earnedXP.toLocaleString()}
-              </p>
-              <p className="text-white/80 text-[11px]" style={{ fontFamily: 'var(--font-body)' }}>
-                / {totalXP.toLocaleString()}
-              </p>
+              <p className="text-[20px] font-bold leading-tight" style={{ fontFamily: 'var(--font-display)' }}>{earnedXP.toLocaleString()}</p>
+              <p className="text-white/80 text-[11px]" style={{ fontFamily: 'var(--font-body)' }}>/ {totalXP.toLocaleString()}</p>
             </div>
           )}
         </div>
       </div>
 
       {/* Sessions header */}
-      <div className="flex items-center justify-between gap-3">
-        <h3 className="text-[16px] font-bold text-[#212529]" style={{ fontFamily: 'var(--font-display)' }}>
-          Sessions
-        </h3>
-        {isFounder && (
-          <button
-            onClick={addSessionAndEdit}
-            className="flex items-center gap-1.5 px-3.5 py-2 min-h-[44px] rounded-xl bg-[#00a79d] text-white text-[14px] font-semibold hover:bg-[#008f86] transition-colors shrink-0"
-            style={{ fontFamily: 'var(--font-body)' }}
-          >
-            <Plus className="size-4" strokeWidth={1.75} />
-            Add Session
-          </button>
-        )}
-      </div>
+      <h3 className="text-[16px] font-bold text-[#212529]" style={{ fontFamily: 'var(--font-display)' }}>Sessions</h3>
 
       {/* Session list */}
       <div className="flex flex-col gap-3">
@@ -993,24 +883,35 @@ export function SyllabusTab({ bubble, isFounder, isAuthor = true }: Props) {
             isLast={i === sessions.length - 1}
             isMenuOpen={openMenuId === session.id}
             isEditing={editingId === session.id}
-            isEditingAI={editingId === session.id && editingWithAI}
             isAuthor={isAuthor}
-            onOpenMenu={() => { setOpenMenuId(session.id); }}
+            memberIds={bubble.memberIds}
+            onOpenMenu={() => setOpenMenuId(session.id)}
             onCloseMenu={() => setOpenMenuId(null)}
-            onStartEdit={withAI => startEdit(session.id, withAI)}
+            onStartEdit={() => { setEditingId(session.id); setOpenMenuId(null); }}
             onSaveEdit={updates => saveEdit(session.id, updates)}
-            onCancelEdit={cancelEdit}
+            onCancelEdit={() => setEditingId(null)}
             onDuplicate={() => duplicate(session.id)}
             onMoveUp={() => moveUp(session.id)}
             onMoveDown={() => moveDown(session.id)}
             onRequestDelete={() => requestDelete(session.id)}
-            onUpdate={updated => setSessions(ss => ss.map(s => s.id === updated.id ? updated : s))}
           />
         ))}
+
         {sessions.length === 0 && (
           <div className="text-center py-12 text-[#6C757D]" style={{ fontFamily: 'var(--font-body)' }}>
-            {isFounder ? 'Click "Add Session" to build your syllabus.' : 'Sessions coming soon.'}
+            {isFounder ? 'Click "Add Session" below to build your course guide.' : 'Sessions coming soon.'}
           </div>
+        )}
+
+        {/* Add Session — bottom, secondary style */}
+        {isFounder && (
+          <button
+            onClick={addSession}
+            className="flex items-center justify-center gap-1.5 w-full py-3 rounded-2xl border-2 border-dashed border-[#D1FAE5] text-[#00a79d] text-[14px] font-semibold hover:bg-[#F0FFFE] hover:border-[#00a79d] transition-colors"
+            style={{ fontFamily: 'var(--font-body)' }}
+          >
+            <Plus className="size-4" strokeWidth={2} /> Add Session
+          </button>
         )}
       </div>
 
@@ -1022,8 +923,6 @@ export function SyllabusTab({ bubble, isFounder, isAuthor = true }: Props) {
           onCancel={() => setDeleteTarget(null)}
         />
       )}
-
     </div>
   );
 }
-
