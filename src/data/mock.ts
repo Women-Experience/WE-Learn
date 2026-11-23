@@ -114,12 +114,105 @@ const DATES = [
   '2026-04-15', '2026-04-22',
 ];
 
+// Per-session Learn / Discuss content and homework — written for the
+// "AI-Native Product Design" demo course but intentionally concrete so
+// every session reads like a real facilitator plan.
+const SESSION_CONTENT: {
+  learn: string;
+  discuss: string;
+  lastWeek: string;
+  preMaterials: string;
+  homework?: string;
+}[] = [
+  {
+    // 0 — Introduction & Foundations
+    lastWeek: 'First session — no task yet. Quick round of introductions instead: name, role, and one thing you want to get from this Bubble.',
+    learn:    'Walk through what makes an AI-native product different from traditional software: latency as UX, probabilistic outputs, and progressive trust. Three live product examples — one that handles all three well, two that don\'t.',
+    discuss:  'Pairs: pick one AI product you use every week. Where does it feel intentionally designed? Where does it feel like the AI was bolted on? 10 minutes, then share one finding with the group.',
+    preMaterials: 'Watch the Figma AI deep-dive (15 min, linked in resources). Come ready to name one thing that surprised you and one thing that felt half-baked.',
+    homework: 'Map one AI product you use daily: a screenshot, what the AI actually does, where it surprises you, and one specific thing you\'d change. Bring it as a screenshot + 3 bullet points to share at the start of session 2.',
+  },
+  {
+    // 1 — Core Concepts Deep Dive
+    lastWeek: 'Whoever submitted shows her product map. Two minutes each — screenshot on screen, walk through the three bullet points. One comment from the group after each.',
+    learn:    'Go deeper on the three concepts from session 1. Latency: how Vercel\'s AI toolbar uses skeleton states and streaming to make 3-second waits feel fast. Probabilistic outputs: how Notion AI surfaces uncertainty without breaking flow. Progressive trust: how GitHub Copilot earns the right to autocomplete more over time.',
+    discuss:  'Which of the three concepts shows up most in your own work right now? Pairs share a specific moment — a screen, a flow, a edge case — where it mattered or caused a problem.',
+    preMaterials: 'Read the NN/g article "Designing AI: The UX of Machine Learning" (10 min, linked). Annotate one thing you agree with and one thing you\'d push back on.',
+    homework: 'Pick one of the three concepts and find it in a product you work on or use regularly. Document what the product does well, where it breaks down, and one concrete change. Share as a Loom or annotated slide.',
+  },
+  {
+    // 2 — Practical Frameworks
+    lastWeek: 'Whoever submitted shows her Loom or slide. Two minutes, then one comment. Focus on: did the concept actually show up the way she expected?',
+    learn:    'Two frameworks in depth. The AI confidence spectrum: five levels from silent to assertive, with a real product example at each level. The human-override pattern: when to surface a manual escape hatch, and three ways to do it without making users feel like they\'re fighting the AI.',
+    discuss:  'Take a product from last week\'s homework. Run it through the confidence spectrum — where does it sit? Does it use the human-override pattern? Where does it fall short? Pairs annotate together, then report back.',
+    preMaterials: 'Pick one product from your portfolio that has any AI or automation. Write 2 sentences: what does the AI do, and what does the user have to trust?',
+    homework: 'Apply the AI confidence spectrum to your portfolio product. Mark every touchpoint where the system expresses confidence — or should. Bring a marked-up screenshot.',
+  },
+  {
+    // 3 — Hands-On Workshop
+    lastWeek: 'Marked-up screenshots on screen. Two minutes each — walk through one touchpoint you marked and why. The group picks the most interesting one to redesign together.',
+    learn:    'Live redesign of the screenshot the group chose. The leader drives, everyone contributes. Apply the confidence spectrum and the override pattern. Work through three iterations in 25 minutes.',
+    discuss:  'The group votes on the two changes from the redesign that would have the most impact. What would we do differently with 2 more hours?',
+    preMaterials: 'Bring your marked-up screenshot from last week in a format you can share on screen. No new prep needed — the work you already did is the material.',
+    homework: 'Take the redesign we did together and apply it to your own product. One screen, one specific change, same framework. Share a before/after — doesn\'t have to be polished.',
+  },
+  {
+    // 4 — Guest Expert Session
+    lastWeek: 'Before/afters on screen. Two minutes each. Focus on what changed and what the framework forced you to notice.',
+    learn:    'Guest walks through a project from brief to shipped: what the AI was supposed to do, what actually happened in testing, and the two design decisions that made the difference. Leave 10 minutes for the prepared questions.',
+    discuss:  'What surprised you about how the guest handled the hardest part of the project? Each pair picks one thing to steal and applies it to their own work.',
+    preMaterials: 'Look up the guest\'s work before the session (link in resources). Write one specific question — something you can\'t google and that only someone who built it could answer.',
+    homework: 'Take one idea from the guest\'s talk and apply it to something you\'re working on. Document the before and after in a slide or a written note.',
+  },
+  {
+    // 5 — Mid-Program Review
+    lastWeek: 'Guest follow-up: who applied something from the last session? Share what you tried, even if it didn\'t work.',
+    learn:    'Look back at sessions 1–5 together. The leader maps the concepts on a whiteboard. The group votes on which ones landed cleanly and which are still fuzzy. Spend the last 15 minutes on the two fuzziest ones.',
+    discuss:  'Each person answers: what is the one thing from the first half you are actually using in your work? What is still abstract? Be specific — name a screen or a decision, not a concept.',
+    preMaterials: 'Skim your notes or deliverables from sessions 1–5. Flag one thing you feel confident about and one thing you\'re still not sure how to use.',
+    homework: 'Write a 5-sentence brief for your project: what you\'re designing, what AI challenge it solves, what you\'ve already tried, and what you\'re still figuring out. This becomes your working brief for the second half.',
+  },
+  {
+    // 6 — Advanced Techniques
+    lastWeek: 'Briefs on screen. Two minutes each — read it aloud, then one clarifying question from the group.',
+    learn:    'Three advanced patterns. Streaming UX: how to design for outputs that arrive word by word without making users feel they\'re watching a typewriter. Error recovery: how to surface when the AI got it wrong without destroying trust. Designing for model updates: how to build interfaces that don\'t break when the underlying model changes.',
+    discuss:  'Which of the three patterns applies most to your project right now? Pairs sketch one specific change they could make this week — a note, a rough wireframe, a decision.',
+    preMaterials: 'Read your project brief from last session. Come with one specific interaction where the AI output can be wrong and there\'s currently no recovery designed for it.',
+    homework: 'Pick one of the three patterns and implement or prototype it in your project. Bring a working prototype or annotated mockup — doesn\'t need to be pixel-perfect.',
+  },
+  {
+    // 7 — Real-World Case Studies
+    lastWeek: 'Prototypes and mockups on screen. Two minutes each — show the interaction, name the pattern you applied, say what surprised you.',
+    learn:    'Two case studies side by side. Case 1: a product that launched well — walk through the three design decisions that held up under real users. Case 2: a product that didn\'t — walk through the one decision that looked fine in testing and failed in production.',
+    discuss:  'Take the failed case study. In pairs: identify the one design decision you would have changed, and what you\'d have done instead. Then bring it back — does anyone disagree?',
+    preMaterials: 'Think of an AI product launch you remember — one that impressed you or one that flopped. Come ready to say what happened and why you think it did.',
+    homework: 'Audit your own project against the two case studies: list two decisions you\'re making that match the successful one, and one that resembles the failure. Three bullet points.',
+  },
+  {
+    // 8 — Peer Feedback & Critique
+    lastWeek: 'Audits on screen. Two minutes each — read the three bullet points, say which failure pattern you spotted in your own work.',
+    learn:    'Structured critique: each project gets 5 minutes of presentation and 5 minutes of feedback using this rubric — clarity of the AI\'s role, quality of the confidence signal, handling of errors. The leader models the first round.',
+    discuss:  'After all critiques: what pattern of feedback showed up across every project? What is the group still not sure how to solve?',
+    preMaterials: 'Prepare a 5-minute presentation of your project: problem, solution, one interaction that uses AI, and one thing you\'re still unsure about. Practice it once.',
+    homework: 'Take the feedback from today and make one specific change to your project. Document what changed and why in a note or a slide. This is your penultimate version.',
+  },
+  {
+    // 9 — Final Project & Wrap-Up
+    lastWeek: 'Penultimate versions on screen. Two minutes each — what changed since the critique, and what you decided not to change.',
+    learn:    'No new material today. Brief framing of what a finished project demonstrates — then straight into final presentations. Each person gets 8 minutes: 5 to present, 3 for questions.',
+    discuss:  'After all presentations: what did this group get consistently right across projects? What would we do differently in a second run of this Bubble?',
+    preMaterials: 'Finish your final project. It should include: the problem, your solution, at least one AI interaction you designed from scratch, and one paragraph on what you learned building it.',
+    homework: undefined,
+  },
+];
+
 function makeSeedSections(sessionIdx: number): SessionSection[] {
+  const c = SESSION_CONTENT[sessionIdx] ?? SESSION_CONTENT[SESSION_CONTENT.length - 1];
   const base: Omit<SessionSection, 'id'>[] = [
     { type: 'check-in',  title: 'Check-in',          minutes: 10, whatHappens: 'Go around: each person says in one sentence what she did since last time.' },
-    { type: 'last-week', title: "Last week's task",   minutes: 15, whatHappens: 'Whoever submitted shows her work. Two minutes each, then one comment from the group.' },
-    { type: 'learn',     title: 'Learn',              minutes: 30, whatHappens: 'Whoever is leading walks through the material. Stop for questions as they come.' },
-    { type: 'discuss',   title: 'Discuss',            minutes: 25, whatHappens: 'Split into pairs for 10 minutes, then bring it back to the group.' },
+    { type: 'last-week', title: "Last week's task",   minutes: 15, whatHappens: c.lastWeek },
+    { type: 'learn',     title: 'Learn',              minutes: 30, whatHappens: c.learn    },
+    { type: 'discuss',   title: 'Discuss',            minutes: 25, whatHappens: c.discuss  },
     { type: 'wrap-up',   title: 'Wrap-up',            minutes: 10, whatHappens: 'Agree on the task for next time and who leads the next session.' },
   ];
   return base.map((s, i) => ({ ...s, id: `s${sessionIdx + 1}-${i}` }));
@@ -127,7 +220,7 @@ function makeSeedSections(sessionIdx: number): SessionSection[] {
 
 function makeSessions(count: number, doneTo: number, founderId: string): Session[] {
   return Array.from({ length: count }, (_, i) => {
-    const isFirst = i === 0;
+    const c = SESSION_CONTENT[i] ?? SESSION_CONTENT[SESSION_CONTENT.length - 1];
     const session: Session = {
       id: `s-${i + 1}`,
       number: i + 1,
@@ -141,12 +234,8 @@ function makeSessions(count: number, doneTo: number, founderId: string): Session
       ledBy: founderId,
       submissionTypes: ['link'],
       sections: makeSeedSections(i),
-      preMaterials: isFirst
-        ? 'Come ready to introduce yourself in 60 seconds: your name, role, and one thing you want to get out of this Bubble.'
-        : undefined,
-      homework: isFirst
-        ? 'Map one real AI product you use daily: what it does, where it surprises you, and one thing you\'d change. Bring it as a screenshot + 3 bullet points to share at the start of session 2.'
-        : undefined,
+      preMaterials: c.preMaterials,
+      homework: c.homework,
     };
     return session;
   });
