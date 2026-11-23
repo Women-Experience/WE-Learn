@@ -130,9 +130,8 @@ export function JoinBubbleModal({ bubble, onClose, onEnter }: Props) {
                   ← Back
                 </button>
               )}
-              <div className="bg-[#F8F9FA] rounded-xl p-4">
-                <p className="text-[13px] text-[#6C757D] mb-1" style={{ fontFamily: 'var(--font-body)' }}>AI Commitment Check</p>
-                <p className="text-[15px] font-semibold text-[#212529]" style={{ fontFamily: 'var(--font-display)' }}>
+              <div>
+                <p className="text-[17px] font-bold text-[#212529] leading-snug" style={{ fontFamily: 'var(--font-display)' }}>
                   Does every {bubble.scheduleDay} at {bubble.scheduleTime} work for you?
                 </p>
               </div>
@@ -232,7 +231,7 @@ export function JoinBubbleModal({ bubble, onClose, onEnter }: Props) {
                 className="w-full py-3 rounded-xl font-semibold text-[14px] transition-all disabled:opacity-40"
                 style={{ fontFamily: 'var(--font-body)', background: '#00a79d', color: 'white' }}
               >
-                Continue →
+                {hoursInsufficient ? 'Join anyway' : 'Continue →'}
               </button>
 
               <button
@@ -251,12 +250,11 @@ export function JoinBubbleModal({ bubble, onClose, onEnter }: Props) {
               <button onClick={() => setStep('hours')} className="self-start flex items-center gap-1 text-[13px] text-[#6C757D] hover:text-[#495057] transition-colors" style={{ fontFamily: 'var(--font-body)' }}>
                 ← Back
               </button>
-              <div className="bg-[#F8F9FA] rounded-xl p-4">
-                <p className="text-[13px] text-[#6C757D] mb-1" style={{ fontFamily: 'var(--font-body)' }}>AI Commitment Check</p>
-                <p className="text-[15px] font-semibold text-[#212529]" style={{ fontFamily: 'var(--font-display)' }}>
+              <div>
+                <p className="text-[17px] font-bold text-[#212529] leading-snug" style={{ fontFamily: 'var(--font-display)' }}>
                   What is your current experience level with this topic?
                 </p>
-                <p className="text-[13px] text-[#6C757D] mt-1" style={{ fontFamily: 'var(--font-body)' }}>
+                <p className="text-[14px] text-[#6C757D] mt-1" style={{ fontFamily: 'var(--font-body)' }}>
                   This Bubble is set at <strong>{bubble.level}</strong> level.
                 </p>
               </div>
