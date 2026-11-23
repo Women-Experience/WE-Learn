@@ -246,7 +246,6 @@ function SessionCard({
   // Edit state
   const [editTitle,       setEditTitle]       = useState(session.title);
   const [editDate,        setEditDate]        = useState(session.date);
-  const [editXP,          setEditXP]          = useState(String(session.xp));
   const [editLevel,       setEditLevel]       = useState<BubbleLevel>(session.level);
   const [editObjective,   setEditObjective]   = useState(session.learningObjective);
   const [editLedBy,       setEditLedBy]       = useState(session.ledBy);
@@ -260,7 +259,6 @@ function SessionCard({
     if (isEditing) {
       setEditTitle(session.title);
       setEditDate(session.date);
-      setEditXP(String(session.xp));
       setEditLevel(session.level);
       setEditObjective(session.learningObjective);
       setEditLedBy(session.ledBy);
@@ -336,7 +334,7 @@ function SessionCard({
               <cfg.icon className="size-3" strokeWidth={2} /> {cfg.label}
             </span>
             <span className="text-[11px] text-[#6C757D]" style={{ fontFamily: 'var(--font-body)' }}>
-              {session.date} · {totalMinutes} min · {session.xp} XP
+              {session.date} · {totalMinutes} min
             </span>
           </div>
         </div>
@@ -518,31 +516,19 @@ function SessionCard({
               </div>
             </div>
 
-            {/* XP + Level */}
-            <div className="grid grid-cols-2 gap-3">
-              <div className="flex flex-col gap-1">
-                <Label>XP</Label>
-                <input
-                  type="number" min="0"
-                  value={editXP}
-                  onChange={e => setEditXP(e.target.value)}
-                  className="px-3 py-2 rounded-lg border border-[#E9ECEF] focus:outline-none focus:border-[#00a79d] text-[13px] bg-[#F8F9FA]"
-                  style={{ fontFamily: 'var(--font-body)' }}
-                />
-              </div>
-              <div className="flex flex-col gap-1">
-                <Label>Level</Label>
-                <select
-                  value={editLevel}
-                  onChange={e => setEditLevel(e.target.value as BubbleLevel)}
-                  className="px-3 py-2 rounded-lg border border-[#E9ECEF] focus:outline-none focus:border-[#00a79d] text-[13px] bg-[#F8F9FA]"
-                  style={{ fontFamily: 'var(--font-body)' }}
-                >
-                  <option>Beginner</option>
-                  <option>Intermediate</option>
-                  <option>Advanced</option>
-                </select>
-              </div>
+            {/* Level */}
+            <div className="flex flex-col gap-1">
+              <Label>Level</Label>
+              <select
+                value={editLevel}
+                onChange={e => setEditLevel(e.target.value as BubbleLevel)}
+                className="px-3 py-2 rounded-lg border border-[#E9ECEF] focus:outline-none focus:border-[#00a79d] text-[13px] bg-[#F8F9FA]"
+                style={{ fontFamily: 'var(--font-body)' }}
+              >
+                <option>Beginner</option>
+                <option>Intermediate</option>
+                <option>Advanced</option>
+              </select>
             </div>
 
             {/* Learning Objective */}
@@ -648,7 +634,7 @@ function SessionCard({
                       rows={1}
                       value={section.notes ?? ''}
                       onChange={e => updateSection(idx, { notes: e.target.value })}
-                      placeholder="Notes for yourself…"
+                      placeholder="Notes"
                       className="w-full px-3 py-2 rounded-lg border border-[#E9ECEF] focus:outline-none focus:border-[#00a79d] text-[12px] bg-white resize-none"
                       style={{ fontFamily: 'var(--font-body)' }}
                     />
@@ -716,7 +702,6 @@ function SessionCard({
               onClick={() => onSaveEdit({
                 title:            editTitle.trim() || session.title,
                 date:             editDate.trim() || session.date,
-                xp:               parseInt(editXP) || session.xp,
                 level:            editLevel,
                 learningObjective: editObjective.trim(),
                 ledBy:            editLedBy,
@@ -748,12 +733,14 @@ interface Props {
 export function SyllabusTab({ bubble, isFounder, isAuthor = true }: Props) {
   const [sessions, setSessions] = useState<Session[]>(bubble.sessions);
   const [openMenuId, setOpenMenuId]   = useState<string | null>(null);
-  const [editingId, setEditingId]     = useState<string | null>(null);
+  const [editingId, setEditingId]     = useState<string | null>(() => {
+    const first = bubble.sessions[0];
+    if (first && first.status === 'draft' && first.learningObjective === '') return first.id;
+    return null;
+  });
   const [deleteTarget, setDeleteTarget] = useState<{ session: Session; index: number } | null>(null);
 
   const doneCount  = sessions.filter(s => s.status === 'done').length;
-  const totalXP    = sessions.reduce((sum, s) => sum + s.xp, 0);
-  const earnedXP   = sessions.filter(s => s.status === 'done').reduce((sum, s) => sum + s.xp, 0);
   const progressPct = sessions.length > 0 ? Math.round((doneCount / sessions.length) * 100) : 0;
 
   function reflowNumbers(ss: Session[]): Session[] {
@@ -860,13 +847,6 @@ export function SyllabusTab({ bubble, isFounder, isAuthor = true }: Props) {
               <div className="h-full rounded-full bg-white transition-all duration-700" style={{ width: `${progressPct}%` }} />
             </div>
           </div>
-          {totalXP > 0 && (
-            <div className="bg-white/15 rounded-2xl px-4 py-3 text-center shrink-0">
-              <p className="text-[11px] text-white font-semibold mb-0.5" style={{ fontFamily: 'var(--font-body)' }}>XP</p>
-              <p className="text-[20px] font-bold leading-tight" style={{ fontFamily: 'var(--font-display)' }}>{earnedXP.toLocaleString()}</p>
-              <p className="text-white/80 text-[11px]" style={{ fontFamily: 'var(--font-body)' }}>/ {totalXP.toLocaleString()}</p>
-            </div>
-          )}
         </div>
       </div>
 
