@@ -116,11 +116,11 @@ const DATES = [
 
 function makeSeedSections(sessionIdx: number): SessionSection[] {
   const base: Omit<SessionSection, 'id'>[] = [
-    { type: 'check-in',  title: 'Check-in',          minutes: 10 },
-    { type: 'last-week', title: "Last week's task",   minutes: 15 },
-    { type: 'learn',     title: 'Learn',              minutes: 30 },
-    { type: 'discuss',   title: 'Discuss',            minutes: 25 },
-    { type: 'wrap-up',   title: 'Wrap-up',            minutes: 10 },
+    { type: 'check-in',  title: 'Check-in',          minutes: 10, whatHappens: 'Go around: each person says in one sentence what she did since last time.' },
+    { type: 'last-week', title: "Last week's task",   minutes: 15, whatHappens: 'Whoever submitted shows her work. Two minutes each, then one comment from the group.' },
+    { type: 'learn',     title: 'Learn',              minutes: 30, whatHappens: 'Whoever is leading walks through the material. Stop for questions as they come.' },
+    { type: 'discuss',   title: 'Discuss',            minutes: 25, whatHappens: 'Split into pairs for 10 minutes, then bring it back to the group.' },
+    { type: 'wrap-up',   title: 'Wrap-up',            minutes: 10, whatHappens: 'Agree on the task for next time and who leads the next session.' },
   ];
   return base.map((s, i) => ({ ...s, id: `s${sessionIdx + 1}-${i}` }));
 }

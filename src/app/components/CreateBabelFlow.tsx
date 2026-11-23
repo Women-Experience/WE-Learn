@@ -129,11 +129,11 @@ function generateMockSessions(topic: string, level: BubbleLevel, frequency: Freq
       ledBy: '',
       submissionTypes: ['link' as const],
       sections: [
-        { id: `ns-${i}-0`, type: 'check-in'  as const, title: 'Check-in',        minutes: 10 },
-        { id: `ns-${i}-1`, type: 'last-week' as const, title: "Last week's task", minutes: 15 },
-        { id: `ns-${i}-2`, type: 'learn'     as const, title: 'Learn',            minutes: 30 },
-        { id: `ns-${i}-3`, type: 'discuss'   as const, title: 'Discuss',          minutes: 25 },
-        { id: `ns-${i}-4`, type: 'wrap-up'   as const, title: 'Wrap-up',          minutes: 10 },
+        { id: `ns-${i}-0`, type: 'check-in'  as const, title: 'Check-in',        minutes: 10, whatHappens: 'Go around: each person says in one sentence what she did since last time.' },
+        { id: `ns-${i}-1`, type: 'last-week' as const, title: "Last week's task", minutes: 15, whatHappens: 'Whoever submitted shows her work. Two minutes each, then one comment from the group.' },
+        { id: `ns-${i}-2`, type: 'learn'     as const, title: 'Learn',            minutes: 30, whatHappens: 'Whoever is leading walks through the material. Stop for questions as they come.' },
+        { id: `ns-${i}-3`, type: 'discuss'   as const, title: 'Discuss',          minutes: 25, whatHappens: 'Split into pairs for 10 minutes, then bring it back to the group.' },
+        { id: `ns-${i}-4`, type: 'wrap-up'   as const, title: 'Wrap-up',          minutes: 10, whatHappens: 'Agree on the task for next time and who leads the next session.' },
       ],
     };
   });
