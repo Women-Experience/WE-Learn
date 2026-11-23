@@ -78,27 +78,35 @@ function generateMockSessions(topic: string, level: BubbleLevel): Session[] {
     "Final Project & Wrap-Up",
   ];
   const dates = [
-    "Mar 18, 2026","Mar 25, 2026","Apr 1, 2026",
-    "Apr 8, 2026","Apr 15, 2026","Apr 22, 2026",
+    '2026-03-18', '2026-03-25', '2026-04-01',
+    '2026-04-08', '2026-04-15', '2026-04-22',
+  ];
+  const objectives = [
+    `identify the core concepts that make ${topic} different from traditional approaches`,
+    `explain the key frameworks from this program and apply one to a real example`,
+    `choose the right framework for a given challenge and justify the choice to the group`,
+    `build a working prototype that demonstrates at least one pattern from ${topic}`,
+    `evaluate an expert's approach and extract two insights to bring into our own work`,
+    `present a complete project that incorporates at least three concepts from this program`,
   ];
   return sessionTitles.map((title, i) => ({
     id: `new-s-${i + 1}`,
     number: i + 1,
     title,
-    status: 'locked' as Session['status'],
+    status: (i === 0 ? 'this-week' : 'draft') as Session['status'],
     date: dates[i],
     duration: 90,
     xp: 150,
     level,
+    learningObjective: objectives[i],
+    ledBy: '',
+    submissionTypes: ['link' as const],
     sections: [
-      { id: `ns-${i}-lp`, type: 'learning-path' as const, title: 'Learning Path',
-        content: `Session ${i + 1} of ${topic} — we'll explore ${title.toLowerCase()}.` },
-      { id: `ns-${i}-br`, type: 'brief' as const, title: 'Conceptual Brief',
-        content: 'Practical application focus. Come prepared.' },
-      { id: `ns-${i}-vid`, type: 'video' as const, title: 'Video Resources',
-        videoTitle: `Recommended: ${title}`, videoUrl: 'https://youtube.com' },
-      { id: `ns-${i}-sb`, type: 'sandbox' as const, title: 'Project Sandbox',
-        content: 'Submit your project link below.' },
+      { id: `ns-${i}-0`, type: 'check-in'  as const, title: 'Check-in',        minutes: 10 },
+      { id: `ns-${i}-1`, type: 'last-week' as const, title: "Last week's task", minutes: 15 },
+      { id: `ns-${i}-2`, type: 'learn'     as const, title: 'Learn',            minutes: 30 },
+      { id: `ns-${i}-3`, type: 'discuss'   as const, title: 'Discuss',          minutes: 25 },
+      { id: `ns-${i}-4`, type: 'wrap-up'   as const, title: 'Wrap-up',          minutes: 10 },
     ],
   }));
 }
