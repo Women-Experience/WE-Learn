@@ -464,10 +464,10 @@ export function CreateBabelFlow() {
   const [phase, setPhase]         = useState<'wizard' | 'done'>('wizard');
   const [createdBubble, setCreatedBubble] = useState<Bubble | null>(null);
   const [showTransition, setShowTransition] = useState(false);
-  const feedEndRef = useRef<HTMLDivElement>(null);
+  const activeWidgetRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    feedEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    activeWidgetRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, [feed, phase]);
 
   function advanceTo(nextStep: StepKey | null, summary: string, newData: Partial<BubbleData>) {
@@ -662,7 +662,7 @@ export function CreateBabelFlow() {
 
       {/* Feed */}
       {phase === 'wizard' && (
-        <div className="flex-1 max-w-xl mx-auto w-full px-4 py-6 flex flex-col gap-3 overflow-y-auto">
+        <div className="flex-1 max-w-xl mx-auto w-full px-4 pt-6 pb-[70vh] flex flex-col gap-3 overflow-y-auto">
           {feed.map(item => {
             // Skip AI prompts for completed steps — the compact row replaces them
             if (item.kind === 'ai' && lockedSteps.has(item.step)) return null;
@@ -709,15 +709,14 @@ export function CreateBabelFlow() {
 
             if (item.kind === 'widget') {
               return (
-                <div key={item.id} className="ml-11">
+                <div key={item.id} ref={activeWidgetRef} className="ml-11">
                   {renderWidget(item)}
                 </div>
               );
             }
 
             return null;
-          })}
-          <div ref={feedEndRef} />
+          }}
         </div>
       )}
 
