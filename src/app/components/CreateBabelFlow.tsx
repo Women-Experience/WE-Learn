@@ -204,6 +204,13 @@ function ScheduleWidget({ onSelect, locked }: {
   const [day, setDay]   = useState('');
   const [time, setTime] = useState('');
   const [freq, setFreq] = useState<Frequency>('weekly');
+  const submitted = useRef(false);
+
+  function tryAdvance(d: string, t: string, f: Frequency) {
+    if (!d || !t || submitted.current || locked) return;
+    submitted.current = true;
+    onSelect(FULL_DAYS[d], t, f);
+  }
 
   return (
     <div className="flex flex-col gap-4">
@@ -211,7 +218,7 @@ function ScheduleWidget({ onSelect, locked }: {
         <p className="text-[12px] text-[#6C757D] mb-2" style={{ fontFamily: 'var(--font-body)' }}>Day of week</p>
         <div className="flex flex-wrap gap-2">
           {DAYS.map(d => (
-            <button key={d} onClick={() => !locked && setDay(d)} disabled={locked}
+            <button key={d} onClick={() => { if (!locked) { setDay(d); tryAdvance(d, time, freq); } }} disabled={locked}
               className="px-3 py-2 rounded-xl border text-[13px] font-medium transition-all disabled:opacity-50"
               style={{
                 fontFamily: 'var(--font-body)',
@@ -228,7 +235,7 @@ function ScheduleWidget({ onSelect, locked }: {
         <p className="text-[12px] text-[#6C757D] mb-2" style={{ fontFamily: 'var(--font-body)' }}>Time</p>
         <div className="flex flex-wrap gap-2">
           {TIMES.map(t => (
-            <button key={t} onClick={() => !locked && setTime(t)} disabled={locked}
+            <button key={t} onClick={() => { if (!locked) { setTime(t); tryAdvance(day, t, freq); } }} disabled={locked}
               className="px-3 py-2 rounded-xl border text-[13px] font-medium transition-all disabled:opacity-50"
               style={{
                 fontFamily: 'var(--font-body)',
@@ -245,7 +252,7 @@ function ScheduleWidget({ onSelect, locked }: {
         <p className="text-[12px] text-[#6C757D] mb-2" style={{ fontFamily: 'var(--font-body)' }}>Frequency</p>
         <div className="flex gap-2">
           {FREQUENCIES.map(f => (
-            <button key={f.value} onClick={() => !locked && setFreq(f.value)} disabled={locked}
+            <button key={f.value} onClick={() => { if (!locked) { setFreq(f.value); tryAdvance(day, time, f.value); } }} disabled={locked}
               className="flex-1 py-2 rounded-xl border text-[13px] font-medium transition-all disabled:opacity-50"
               style={{
                 fontFamily: 'var(--font-body)',
@@ -258,14 +265,6 @@ function ScheduleWidget({ onSelect, locked }: {
           ))}
         </div>
       </div>
-      {day && time && !locked && (
-        <button
-          onClick={() => onSelect(FULL_DAYS[day], time, freq)}
-          className="w-full py-2.5 rounded-xl bg-[#00a79d] text-white text-[14px] font-semibold hover:bg-[#008f86] transition-colors"
-          style={{ fontFamily: 'var(--font-body)' }}>
-          Confirm →
-        </button>
-      )}
     </div>
   );
 }
@@ -279,9 +278,6 @@ const SEAT_OPTIONS = [
 type SeatKey = typeof SEAT_OPTIONS[number]['key'];
 
 function SeatsWidget({ onSelect, locked }: { onSelect: (n: number) => void; locked: boolean }) {
-  const [selected, setSelected] = useState<SeatKey>('standard');
-  const current = SEAT_OPTIONS.find(o => o.key === selected)!;
-
   return (
     <div className="flex flex-col gap-3">
       <p className="text-[12px] text-[#6C757D]" style={{ fontFamily: 'var(--font-body)' }}>
@@ -290,13 +286,10 @@ function SeatsWidget({ onSelect, locked }: { onSelect: (n: number) => void; lock
       <div className="flex flex-col gap-2">
         {SEAT_OPTIONS.map(opt => (
           <button key={opt.key}
-            onClick={() => !locked && setSelected(opt.key)}
+            onClick={() => !locked && onSelect(opt.value)}
             disabled={locked}
-            className="flex items-center justify-between p-4 rounded-xl border-2 text-left transition-all disabled:opacity-50"
-            style={{
-              borderColor: selected === opt.key ? '#00a79d' : '#E9ECEF',
-              background: selected === opt.key ? '#E5F5F4' : 'white',
-            }}>
+            className="flex items-center justify-between p-4 rounded-xl border-2 text-left transition-all hover:border-[#00a79d] hover:bg-[#E5F5F4] disabled:opacity-50"
+            style={{ borderColor: '#E9ECEF', background: 'white' }}>
             <div>
               <div className="flex items-center gap-2 mb-0.5">
                 <p className="font-semibold text-[14px] text-[#212529]" style={{ fontFamily: 'var(--font-display)' }}>
@@ -313,20 +306,9 @@ function SeatsWidget({ onSelect, locked }: { onSelect: (n: number) => void; lock
                 {opt.range} · {opt.desc}
               </p>
             </div>
-            <div className={`size-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${selected === opt.key ? 'border-[#00a79d] bg-[#00a79d]' : 'border-[#D1D5DB]'}`}>
-              {selected === opt.key && <Check className="size-3 text-white" strokeWidth={2.5} />}
-            </div>
           </button>
         ))}
       </div>
-      {!locked && (
-        <button
-          onClick={() => onSelect(current.value)}
-          className="w-full py-2.5 rounded-xl bg-[#00a79d] text-white text-[14px] font-semibold hover:bg-[#008f86] transition-colors"
-          style={{ fontFamily: 'var(--font-body)' }}>
-          {current.label} ({current.range}) — Next →
-        </button>
-      )}
     </div>
   );
 }
