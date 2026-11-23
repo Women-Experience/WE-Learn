@@ -227,11 +227,11 @@ export function JoinBubbleModal({ bubble, onClose, onEnter }: Props) {
 
               <button
                 onClick={handleHours}
-                disabled={hours === '' || isNaN(hoursNum)}
+                disabled={hours === '' || isNaN(hoursNum) || hoursNum < 1.5}
                 className="w-full py-3 rounded-xl font-semibold text-[14px] transition-all disabled:opacity-40"
                 style={{ fontFamily: 'var(--font-body)', background: '#00a79d', color: 'white' }}
               >
-                {hoursInsufficient ? 'Join anyway' : 'Continue →'}
+                Continue →
               </button>
 
               <button
