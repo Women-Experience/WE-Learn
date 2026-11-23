@@ -38,11 +38,6 @@ export function JoinBubbleModal({ bubble, onClose, onEnter }: Props) {
   }
 
   function handleHours() {
-    const h = parseFloat(hours);
-    if (isNaN(h) || h < 1.5) {
-      setStep('hours'); // stay — show warning
-      return;
-    }
     setStep('experience');
   }
 
@@ -130,6 +125,11 @@ export function JoinBubbleModal({ bubble, onClose, onEnter }: Props) {
           {/* ── Step: Schedule ── */}
           {step === 'schedule' && (
             <div className="flex flex-col gap-4">
+              {!isLoggedIn && (
+                <button onClick={() => setStep('auth')} className="self-start flex items-center gap-1 text-[13px] text-[#6C757D] hover:text-[#495057] transition-colors" style={{ fontFamily: 'var(--font-body)' }}>
+                  ← Back
+                </button>
+              )}
               <div className="bg-[#F8F9FA] rounded-xl p-4">
                 <p className="text-[13px] text-[#6C757D] mb-1" style={{ fontFamily: 'var(--font-body)' }}>AI Commitment Check</p>
                 <p className="text-[15px] font-semibold text-[#212529]" style={{ fontFamily: 'var(--font-display)' }}>
@@ -192,17 +192,20 @@ export function JoinBubbleModal({ bubble, onClose, onEnter }: Props) {
           {/* ── Step: Hours ── */}
           {step === 'hours' && (
             <div className="flex flex-col gap-4">
-              <div className="bg-[#F8F9FA] rounded-xl p-4">
-                <p className="text-[13px] text-[#6C757D] mb-1" style={{ fontFamily: 'var(--font-body)' }}>AI Commitment Check</p>
-                <p className="text-[15px] font-semibold text-[#212529]" style={{ fontFamily: 'var(--font-display)' }}>
-                  How many hours per week can you invest?
+              <button onClick={() => setStep('schedule')} className="self-start flex items-center gap-1 text-[13px] text-[#6C757D] hover:text-[#495057] transition-colors" style={{ fontFamily: 'var(--font-body)' }}>
+                ← Back
+              </button>
+
+              <div>
+                <p className="text-[17px] font-bold text-[#212529] leading-snug" style={{ fontFamily: 'var(--font-display)' }}>
+                  This Bubble needs 1.5 hrs a week.
                 </p>
-                <p className="text-[13px] text-[#6C757D] mt-1" style={{ fontFamily: 'var(--font-body)' }}>
-                  This Bubble requires 1.5 hrs/week minimum (90 min session + self-study).
+                <p className="text-[16px] font-semibold text-[#495057] mt-1" style={{ fontFamily: 'var(--font-display)' }}>
+                  How many can you really give?
                 </p>
               </div>
 
-              <div className="flex gap-2">
+              <div className="flex gap-2 items-center">
                 <input
                   type="number"
                   min="0"
@@ -214,48 +217,40 @@ export function JoinBubbleModal({ bubble, onClose, onEnter }: Props) {
                   className="flex-1 px-4 py-3 rounded-xl border border-[#E9ECEF] text-[15px] focus:outline-none focus:border-[#00a79d] bg-[#F8F9FA]"
                   style={{ fontFamily: 'var(--font-body)' }}
                 />
-                <span className="flex items-center text-[14px] text-[#6C757D]" style={{ fontFamily: 'var(--font-body)' }}>
-                  hrs/week
-                </span>
+                <span className="text-[14px] text-[#6C757D]" style={{ fontFamily: 'var(--font-body)' }}>hrs/week</span>
               </div>
 
               {hoursInsufficient && (
-                <div className="p-3 bg-[#FFF3CD] border border-[#FAB005]/30 rounded-xl text-[13px] text-[#856404] flex items-start gap-2"
-                  style={{ fontFamily: 'var(--font-body)' }}>
-                  <AlertTriangle className="size-4 shrink-0 mt-0.5" strokeWidth={1.75} /> With less than 1.5 hrs/week, it's hard to get full value from the Bubble. Consider joining a lighter schedule or starting smaller.
-                </div>
+                <p className="flex items-center gap-1.5 text-[13px] text-[#856404]" style={{ fontFamily: 'var(--font-body)' }}>
+                  <AlertTriangle className="size-3.5 shrink-0" strokeWidth={1.75} /> Below 1.5 you'll likely fall behind.
+                </p>
               )}
-
-              {hoursInsufficient === false || hours === '' ? null : null}
 
               <button
                 onClick={handleHours}
-                disabled={!hours || isNaN(hoursNum) || hoursNum < 1.5}
+                disabled={hours === '' || isNaN(hoursNum)}
                 className="w-full py-3 rounded-xl font-semibold text-[14px] transition-all disabled:opacity-40"
-                style={{
-                  fontFamily: 'var(--font-body)',
-                  background: '#00a79d',
-                  color: 'white',
-                }}
+                style={{ fontFamily: 'var(--font-body)', background: '#00a79d', color: 'white' }}
               >
                 Continue →
               </button>
 
-              {hoursInsufficient && (
-                <button
-                  onClick={onClose}
-                  className="w-full py-2.5 text-[13px] text-[#6C757D] hover:text-[#495057] text-center"
-                  style={{ fontFamily: 'var(--font-body)' }}
-                >
-                  I'll reconsider and come back
-                </button>
-              )}
+              <button
+                onClick={onClose}
+                className="w-full py-2 text-[13px] text-[#6C757D] hover:text-[#495057] text-center"
+                style={{ fontFamily: 'var(--font-body)' }}
+              >
+                Not now
+              </button>
             </div>
           )}
 
           {/* ── Step: Experience ── */}
           {step === 'experience' && (
             <div className="flex flex-col gap-4">
+              <button onClick={() => setStep('hours')} className="self-start flex items-center gap-1 text-[13px] text-[#6C757D] hover:text-[#495057] transition-colors" style={{ fontFamily: 'var(--font-body)' }}>
+                ← Back
+              </button>
               <div className="bg-[#F8F9FA] rounded-xl p-4">
                 <p className="text-[13px] text-[#6C757D] mb-1" style={{ fontFamily: 'var(--font-body)' }}>AI Commitment Check</p>
                 <p className="text-[15px] font-semibold text-[#212529]" style={{ fontFamily: 'var(--font-display)' }}>
@@ -310,6 +305,9 @@ export function JoinBubbleModal({ bubble, onClose, onEnter }: Props) {
           {/* ── Step: Confirm ── */}
           {step === 'confirm' && (
             <div className="flex flex-col gap-4">
+              <button onClick={() => setStep('experience')} className="self-start flex items-center gap-1 text-[13px] text-[#6C757D] hover:text-[#495057] transition-colors" style={{ fontFamily: 'var(--font-body)' }}>
+                ← Back
+              </button>
               <div className="bg-[#E5F5F4] rounded-xl p-4">
                 <p className="text-[14px] font-semibold text-[#008f86] mb-2 flex items-center gap-1.5" style={{ fontFamily: 'var(--font-display)' }}>
                   <CheckCircle2 className="size-4 shrink-0" strokeWidth={2} /> You're a great fit!
