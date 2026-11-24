@@ -516,21 +516,6 @@ function SessionCard({
               </div>
             </div>
 
-            {/* Level */}
-            <div className="flex flex-col gap-1">
-              <Label>Level</Label>
-              <select
-                value={editLevel}
-                onChange={e => setEditLevel(e.target.value as BubbleLevel)}
-                className="px-3 py-2 rounded-lg border border-[#E9ECEF] focus:outline-none focus:border-[#00a79d] text-[13px] bg-[#F8F9FA]"
-                style={{ fontFamily: 'var(--font-body)' }}
-              >
-                <option>Beginner</option>
-                <option>Intermediate</option>
-                <option>Advanced</option>
-              </select>
-            </div>
-
             {/* Learning Objective */}
             <div className="flex flex-col gap-1">
               <Label required>By the end, we'll be able to…</Label>

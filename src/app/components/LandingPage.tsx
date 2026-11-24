@@ -213,18 +213,18 @@ function CreateBubbleCard({ onClick }: { onClick: () => void }) {
       <div className="flex flex-col gap-3 p-4 flex-1">
         <span className="inline-flex items-center gap-1.5 text-[11px] bg-[#E5F5F4] border border-[#7ECFCA] text-[#008f86] px-2.5 py-1 rounded-full w-fit"
           style={{ fontFamily: 'var(--font-body)' }}>
-          <Sparkles className="size-3" strokeWidth={1.75} /> AI-guided setup
+          <Sparkles className="size-3" strokeWidth={1.75} /> Quick setup
         </span>
 
         <p className="font-bold text-[18px] text-[#212529]" style={{ fontFamily: 'var(--font-display)' }}>
           Create a new Bubble
         </p>
         <p className="text-[#6B7280] text-[13px] leading-relaxed" style={{ fontFamily: 'var(--font-body)' }}>
-          Build a learning group with AI. Define your topic, schedule, and curriculum in minutes.
+          Set up a learning group in minutes. Define your topic, schedule, and get a draft syllabus you can edit.
         </p>
 
         <div className="mt-1 space-y-1.5">
-          {['AI generates your full syllabus', 'Recurring schedule & 4–8 participants', 'Live group page ready to share'].map(f => (
+          {['Draft syllabus ready to edit', 'Recurring schedule & 4–8 participants', 'Live group page ready to share'].map(f => (
             <div key={f} className="flex items-center gap-2">
               <div className="w-1.5 h-1.5 rounded-full bg-[#00a79d] shrink-0" />
               <span className="text-[12px] text-neutral-500" style={{ fontFamily: 'var(--font-body)' }}>{f}</span>
