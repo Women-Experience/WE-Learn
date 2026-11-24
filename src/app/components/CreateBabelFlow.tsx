@@ -662,29 +662,14 @@ export function CreateBabelFlow() {
 
       {/* Feed */}
       {phase === 'wizard' && (
-        <div className="flex-1 max-w-xl mx-auto w-full px-4 pt-6 pb-[70vh] flex flex-col gap-3 overflow-y-auto">
-          {feed.map(item => {
-            // Skip AI prompts for completed steps — the compact row replaces them
-            if (item.kind === 'ai' && lockedSteps.has(item.step)) return null;
+        <div className="flex-1 max-w-xl mx-auto w-full overflow-y-auto flex flex-col">
 
-            if (item.kind === 'ai') {
-              return (
-                <div key={item.id} className="flex items-start gap-3">
-                  <div className="size-8 rounded-full bg-[#00a79d] flex items-center justify-center shrink-0">
-                    <Sparkles className="size-4 text-white" strokeWidth={1.75} />
-                  </div>
-                  <div className="bg-white rounded-2xl rounded-tl-sm px-4 py-3 text-[14px] text-[#212529] max-w-[85%]"
-                    style={{ fontFamily: 'var(--font-body)', boxShadow: 'var(--shadow-sm)' }}>
-                    {item.text}
-                  </div>
-                </div>
-              );
-            }
-
-            if (item.kind === 'widget' && item.locked) {
-              return (
+          {/* ── Sticky completed-steps strip ── */}
+          {feed.some(i => i.kind === 'widget' && i.locked) && (
+            <div className="sticky top-0 z-10 bg-[#F8F9FA] px-4 pt-3 pb-2 flex flex-col gap-1.5">
+              {feed.filter(i => i.kind === 'widget' && i.locked).map(item => (
                 <div key={item.id}
-                  className="flex items-center justify-between gap-3 px-4 py-3 bg-white rounded-2xl border border-[#E9ECEF]"
+                  className="flex items-center justify-between gap-3 px-4 py-2.5 bg-white rounded-2xl border border-[#E9ECEF]"
                   style={{ boxShadow: 'var(--shadow-sm)' }}>
                   <div className="flex items-center gap-2 min-w-0">
                     <span className="text-[12px] text-[#ADB5BD] shrink-0" style={{ fontFamily: 'var(--font-body)' }}>
@@ -704,19 +689,41 @@ export function CreateBabelFlow() {
                     </button>
                   )}
                 </div>
-              );
-            }
+              ))}
+            </div>
+          )}
 
-            if (item.kind === 'widget') {
-              return (
-                <div key={item.id} ref={activeWidgetRef} className="ml-11">
-                  {renderWidget(item)}
-                </div>
-              );
-            }
+          {/* ── Active feed (AI prompt + current widget) ── */}
+          <div className="px-4 pt-4 pb-[70vh] flex flex-col gap-3">
+            {feed.map(item => {
+              if (item.kind === 'ai' && lockedSteps.has(item.step)) return null;
+              if (item.kind === 'widget' && item.locked) return null;
 
-            return null;
-          })}
+              if (item.kind === 'ai') {
+                return (
+                  <div key={item.id} className="flex items-start gap-3">
+                    <div className="size-8 rounded-full bg-[#00a79d] flex items-center justify-center shrink-0">
+                      <Sparkles className="size-4 text-white" strokeWidth={1.75} />
+                    </div>
+                    <div className="bg-white rounded-2xl rounded-tl-sm px-4 py-3 text-[14px] text-[#212529] max-w-[85%]"
+                      style={{ fontFamily: 'var(--font-body)', boxShadow: 'var(--shadow-sm)' }}>
+                      {item.text}
+                    </div>
+                  </div>
+                );
+              }
+
+              if (item.kind === 'widget') {
+                return (
+                  <div key={item.id} ref={activeWidgetRef} className="ml-11">
+                    {renderWidget(item)}
+                  </div>
+                );
+              }
+
+              return null;
+            })}
+          </div>
         </div>
       )}
 

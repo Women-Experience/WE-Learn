@@ -529,34 +529,28 @@ function SessionCard({
               />
             </div>
 
-            {/* Led By */}
-            <div className="flex flex-col gap-1">
-              <Label required>Led by</Label>
-              <select
-                value={editLedBy}
-                onChange={e => setEditLedBy(e.target.value)}
-                className="px-3 py-2 rounded-lg border border-[#E9ECEF] focus:outline-none focus:border-[#00a79d] text-[13px] bg-[#F8F9FA]"
+            {/* Pre-materials */}
+            {editPreMats ? (
+              <div className="flex flex-col gap-1">
+                <Label>Before we meet</Label>
+                <textarea
+                  rows={2}
+                  value={editPreMats}
+                  onChange={e => setEditPreMats(e.target.value)}
+                  placeholder="Readings, videos, or prep to do before we meet."
+                  className="px-3 py-2 rounded-lg border border-[#E9ECEF] focus:outline-none focus:border-[#00a79d] text-[13px] bg-[#F8F9FA] resize-none"
+                  style={{ fontFamily: 'var(--font-body)' }}
+                />
+              </div>
+            ) : (
+              <button
+                onClick={() => setEditPreMats(' ')}
+                className="flex items-center gap-1.5 text-[13px] text-[#ADB5BD] hover:text-[#00a79d] transition-colors w-fit"
                 style={{ fontFamily: 'var(--font-body)' }}
               >
-                {memberIds.map(id => {
-                  const m = getMemberById(id);
-                  return <option key={id} value={id}>{m?.name ?? id}</option>;
-                })}
-              </select>
-            </div>
-
-            {/* Pre-materials */}
-            <div className="flex flex-col gap-1">
-              <Label>Before we meet</Label>
-              <textarea
-                rows={2}
-                value={editPreMats}
-                onChange={e => setEditPreMats(e.target.value)}
-                placeholder="Readings, videos, or prep to do before we meet."
-                className="px-3 py-2 rounded-lg border border-[#E9ECEF] focus:outline-none focus:border-[#00a79d] text-[13px] bg-[#F8F9FA] resize-none"
-                style={{ fontFamily: 'var(--font-body)' }}
-              />
-            </div>
+                <Plus className="size-3.5" strokeWidth={2} /> Add "Before we meet"
+              </button>
+            )}
 
             {/* Steps */}
             <div className="flex flex-col gap-2">
@@ -614,15 +608,6 @@ function SessionCard({
                       className="w-full px-3 py-2 rounded-lg border border-[#E9ECEF] focus:outline-none focus:border-[#00a79d] text-[12px] bg-white resize-none"
                       style={{ fontFamily: 'var(--font-body)' }}
                     />
-                    {/* Row 3: notes */}
-                    <textarea
-                      rows={1}
-                      value={section.notes ?? ''}
-                      onChange={e => updateSection(idx, { notes: e.target.value })}
-                      placeholder="Notes"
-                      className="w-full px-3 py-2 rounded-lg border border-[#E9ECEF] focus:outline-none focus:border-[#00a79d] text-[12px] bg-white resize-none"
-                      style={{ fontFamily: 'var(--font-body)' }}
-                    />
                   </div>
                 );
               })}
@@ -669,10 +654,20 @@ function SessionCard({
                 </div>
               </div>
 
-              <div className="flex flex-col gap-1">
-                <Label>Extra resources</Label>
-                <ExtraResourceEditor entries={editResources} onChange={setEditResources} />
-              </div>
+              {editResources.length > 0 ? (
+                <div className="flex flex-col gap-1">
+                  <Label>Extra resources</Label>
+                  <ExtraResourceEditor entries={editResources} onChange={setEditResources} />
+                </div>
+              ) : (
+                <button
+                  onClick={() => setEditResources([{ id: `er-${Date.now()}`, title: '', url: '', description: '' }])}
+                  className="flex items-center gap-1.5 text-[13px] text-[#ADB5BD] hover:text-[#00a79d] transition-colors w-fit"
+                  style={{ fontFamily: 'var(--font-body)' }}
+                >
+                  <Plus className="size-3.5" strokeWidth={2} /> Add extra resources
+                </button>
+              )}
             </div>
           </div>
 
