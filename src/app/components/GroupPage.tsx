@@ -404,7 +404,7 @@ export function GroupPage() {
                 <div className="flex items-center gap-1.5 text-[12px] text-[#6C757D]"
                   style={{ fontFamily: 'var(--font-body)' }}>
                   <img src={founder.avatar} alt={founder.name} className="size-5 rounded-full object-cover" />
-                  <span className="hidden sm:inline">Led by </span>
+                  <span className="hidden sm:inline">Created by </span>
                   <button
                     onClick={() => setActiveTab('members')}
                     className="font-semibold text-[#495057] hover:text-[#00a79d] hover:underline transition-colors"
