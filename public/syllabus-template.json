@@ -1,0 +1,23 @@
+{
+  "format": "we-syllabus",
+  "version": 2,
+  "sessions": [
+    {
+      "title": "Session title, for example: What is AI-assisted user research?",
+      "goal": "One sentence that starts with a verb: what we will be able to do by the end.",
+      "level": "Beginner",
+      "preMaterials": "What to read, watch or prepare before we meet.",
+      "sections": [
+        { "type": "check-in",  "title": "Check-in",         "minutes": 10, "content": "A quick round: one word on how everyone arrives." },
+        { "type": "last-week", "title": "Last week's task", "minutes": 15, "content": "Who shares last week's homework, and how long each person gets." },
+        { "type": "learn",     "title": "Learn",            "minutes": 30, "content": "What the facilitator walks through, with concrete examples." },
+        { "type": "discuss",   "title": "Discuss",          "minutes": 25, "content": "The question pairs discuss, and how they report back." },
+        { "type": "wrap-up",   "title": "Wrap-up",          "minutes": 10, "content": "Recap the objective and agree on the homework." }
+      ],
+      "homework": "A concrete deliverable members can share at the next meeting.",
+      "resources": [
+        { "title": "Title of a resource", "url": "https://example.com/replace-with-a-real-link", "description": "Why it is worth your time." }
+      ]
+    }
+  ]
+}

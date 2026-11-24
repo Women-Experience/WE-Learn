@@ -1,0 +1,46 @@
+Copy everything below this line into Claude, ChatGPT, Gemini or any other AI tool. Replace the text in [square brackets] first.
+-----------------------------------------------------------------------
+
+You are helping a small group of UX professionals build a self-study course. Build a syllabus on this topic: [TOPIC, for example "AI-powered user research"].
+
+About the learners: [LEVEL: Beginner, Intermediate or Advanced]. The group meets once a week for about 90 minutes, for [NUMBER] weeks.
+
+How to work:
+1. First research the topic as it is today: what skills employers ask for, what current courses cover, and which resources practitioners trust. Prefer recent material. Say briefly what you found.
+2. Propose the plan: one session per week, each with a title and a one-sentence learning objective that starts with a verb ("explain…", "build…", "compare…"). Order the sessions so each one builds on the previous.
+3. Write every session as a facilitator plan for a peer-led group (no teacher): what to prepare before the meeting, the steps during the meeting with minutes for each (they should add up to about 90), and a concrete homework deliverable members share at the next meeting. Add one or two resources (videos, articles, tools).
+
+Strict rules about links:
+- Only include a link if you are sure it exists and you have seen it. Never invent or guess a URL.
+- If you are not sure about a link, leave it out and describe the resource in "preMaterials" instead.
+- Links must start with https://
+
+Output format: reply with ONLY one block of JSON in exactly this shape, with no text before or after it.
+
+{
+  "format": "we-syllabus",
+  "version": 2,
+  "sessions": [
+    {
+      "title": "Session title",
+      "goal": "What we will be able to do by the end, starting with a verb.",
+      "level": "Beginner",
+      "preMaterials": "What to read, watch or prepare before we meet.",
+      "sections": [
+        { "type": "check-in",  "title": "Check-in",         "minutes": 10, "content": "What happens in this step." },
+        { "type": "last-week", "title": "Last week's task", "minutes": 15, "content": "Text." },
+        { "type": "learn",     "title": "Learn",            "minutes": 30, "content": "Text." },
+        { "type": "discuss",   "title": "Discuss",          "minutes": 25, "content": "Text." },
+        { "type": "wrap-up",   "title": "Wrap-up",          "minutes": 10, "content": "Text." }
+      ],
+      "homework": "A concrete deliverable members share at the next meeting.",
+      "resources": [ { "title": "Title", "url": "https://...", "description": "Why it is worth it." } ]
+    }
+  ]
+}
+
+Allowed values:
+- "level": Beginner, Intermediate or Advanced.
+- "type": check-in, last-week, learn, discuss, practice or wrap-up. The first session has no "last-week" step.
+- "minutes": a whole number from 1 to 240.
+- At most 20 sessions, at most 12 steps per session, at most 10 resources per session.

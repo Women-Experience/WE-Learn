@@ -1,8 +1,11 @@
 import { useState } from "react";
-import { X, XCircle, Check, CheckCircle2, PartyPopper, AlertTriangle, Info } from "lucide-react";
+import { useNavigate } from "react-router";
+import { toast } from "sonner";
+import { X, XCircle, Check, CheckCircle2, PartyPopper, AlertTriangle, Info, Bell } from "lucide-react";
+import { errorMessage } from "../../data/api";
 import { useApp } from "../../context/AppContext";
+import { updateMyProfile } from "../../data/api";
 import type { Bubble } from "../../types";
-import { MOCK_BUBBLES } from "../../data/mock";
 
 type Step = 'auth' | 'schedule' | 'hours' | 'experience' | 'confirm' | 'full' | 'done';
 type ExperienceLevel = 'Beginner' | 'Intermediate' | 'Advanced';
@@ -14,17 +17,21 @@ interface Props {
 }
 
 export function JoinBubbleModal({ bubble, onClose, onEnter }: Props) {
+  const navigate = useNavigate();
   const { isLoggedIn, login, joinBubble, currentUser, bubbles } = useApp();
   const [step, setStep] = useState<Step>(isLoggedIn ? 'schedule' : 'auth');
   const [scheduleOk, setScheduleOk] = useState<boolean | null>(null);
   const [hours, setHours] = useState<string>('');
   const [experience, setExperience] = useState<ExperienceLevel | null>(null);
+  const [notifyOk, setNotifyOk] = useState(currentUser?.notifyConsent ?? false);
+  const [wasWaitlisted, setWasWaitlisted] = useState(false);
 
+  const [joining, setJoining] = useState(false);
   const isFull = bubble.takenSeats >= bubble.maxSeats;
 
   function handleLogin() {
+    // Redirects to Google sign-in; the page navigates away and comes back signed in.
     login();
-    setStep(isFull ? 'full' : 'schedule');
   }
 
   function handleSchedule(ok: boolean) {
@@ -47,14 +54,49 @@ export function JoinBubbleModal({ bubble, onClose, onEnter }: Props) {
   }
 
   function handleConfirm() {
-    joinBubble(bubble.id);
-    setStep('done');
+    if (joining) return;
+    setJoining(true);
+    // Notification consent (PRD step 6) — remembered on the profile.
+    if (notifyOk && !currentUser?.notifyConsent) {
+      updateMyProfile({ notifyConsent: true }).catch(() => {});
+    }
+    joinBubble(bubble.id)
+      .then(outcome => {
+        if (outcome === 'joined') {
+          setStep('done');
+        } else {
+          setWasWaitlisted(true);
+          setStep('full');
+        }
+      })
+      .catch(err => toast.error(errorMessage(err, 'Could not join right now — please try again.')))
+      .finally(() => setJoining(false));
   }
 
-  // Find alternative bubble on same topic
-  const alternative = bubbles.find(
-    b => b.id !== bubble.id && b.topic === bubble.topic && b.status === 'open'
-  );
+  function handleWaitlist() {
+    if (joining) return;
+    setJoining(true);
+    joinBubble(bubble.id)
+      .then(outcome => {
+        if (outcome === 'waitlisted') toast.success("You're on the waitlist — we'll let you know when a spot opens.");
+        else setStep('done'); // a seat opened up in the meantime!
+        if (outcome === 'waitlisted') onClose();
+      })
+      .catch(err => toast.error(errorMessage(err, 'Could not join the waitlist — please try again.')))
+      .finally(() => setJoining(false));
+  }
+
+  // Find an alternative bubble: same topic, open seats, and a DIFFERENT
+  // day/time (she just told us this slot doesn't work). Per PRD matching
+  // logic: topic is required; we prefer a different slot when suggesting.
+  const alternative =
+    bubbles.find(b =>
+      b.id !== bubble.id && b.topic === bubble.topic && b.status === 'open'
+      && (b.scheduleDay !== bubble.scheduleDay || b.scheduleTime !== bubble.scheduleTime))
+    ?? bubbles.find(b =>
+      b.id !== bubble.id && b.status === 'open'
+      && b.level === bubble.level
+      && (b.scheduleDay !== bubble.scheduleDay || b.scheduleTime !== bubble.scheduleTime));
 
   const hoursNum = parseFloat(hours);
   const hoursInsufficient = hours !== '' && !isNaN(hoursNum) && hoursNum < 1.5;
@@ -169,7 +211,7 @@ export function JoinBubbleModal({ bubble, onClose, onEnter }: Props) {
                         </p>
                       </div>
                       <button
-                        onClick={onClose}
+                        onClick={() => { onClose(); navigate(`/group/${alternative.id}`); }}
                         className="text-[13px] text-[#00a79d] font-semibold hover:underline shrink-0"
                         style={{ fontFamily: 'var(--font-body)' }}
                       >
@@ -287,16 +329,35 @@ export function JoinBubbleModal({ bubble, onClose, onEnter }: Props) {
               <p className="text-[17px] font-bold text-[#212529]" style={{ fontFamily: 'var(--font-display)' }}>
                 This Bubble is full
               </p>
-              <p className="text-[14px] text-[#6C757D]" style={{ fontFamily: 'var(--font-body)' }}>
-                All {bubble.maxSeats} spots are taken. You can join the waitlist and we'll notify you when a spot opens.
-              </p>
-              <button
-                onClick={onClose}
-                className="w-full py-3 rounded-xl border border-[#00a79d] text-[#00a79d] font-semibold text-[14px] hover:bg-[#E5F5F4] transition-colors"
-                style={{ fontFamily: 'var(--font-body)' }}
-              >
-                Join Waitlist
-              </button>
+              {wasWaitlisted ? (
+                <>
+                  <p className="text-[14px] text-[#6C757D]" style={{ fontFamily: 'var(--font-body)' }}>
+                    All {bubble.maxSeats} spots are taken, so we've added you to the waitlist.
+                    The founder can admit you as soon as a seat opens up.
+                  </p>
+                  <button
+                    onClick={onClose}
+                    className="w-full py-3 rounded-xl bg-[#00a79d] text-white font-semibold text-[14px] hover:bg-[#008f86] transition-colors"
+                    style={{ fontFamily: 'var(--font-body)' }}
+                  >
+                    Got it
+                  </button>
+                </>
+              ) : (
+                <>
+                  <p className="text-[14px] text-[#6C757D]" style={{ fontFamily: 'var(--font-body)' }}>
+                    All {bubble.maxSeats} spots are taken. Join the waitlist and the founder can admit you when a spot opens.
+                  </p>
+                  <button
+                    onClick={handleWaitlist}
+                    disabled={joining}
+                    className="w-full py-3 rounded-xl border border-[#00a79d] text-[#00a79d] font-semibold text-[14px] hover:bg-[#E5F5F4] transition-colors disabled:opacity-50"
+                    style={{ fontFamily: 'var(--font-body)' }}
+                  >
+                    {joining ? 'Joining…' : 'Join Waitlist'}
+                  </button>
+                </>
+              )}
             </div>
           )}
 
@@ -332,12 +393,27 @@ export function JoinBubbleModal({ bubble, onClose, onEnter }: Props) {
                   <Info className="size-4 shrink-0 mt-0.5" strokeWidth={1.75} /> This Bubble is set at <strong>{bubble.level}</strong> level, while you marked yourself as <strong>{experience}</strong>. You can still join — the group can adjust pace together.
                 </div>
               )}
+              {/* Notification consent — join-flow PRD step 6 */}
+              <label className="flex items-start gap-3 p-3 rounded-xl border border-[#E9ECEF] cursor-pointer hover:bg-[#F8F9FA] transition-colors">
+                <input
+                  type="checkbox"
+                  checked={notifyOk}
+                  onChange={e => setNotifyOk(e.target.checked)}
+                  className="mt-0.5 size-4 accent-[#00a79d]"
+                />
+                <span className="text-[13px] text-[#495057] flex items-start gap-1.5" style={{ fontFamily: 'var(--font-body)' }}>
+                  <Bell className="size-4 shrink-0 mt-0.5 text-[#00a79d]" strokeWidth={1.75} />
+                  <span>Notify me about this Bubble's sessions and updates (needed to take part).</span>
+                </span>
+              </label>
               <button
                 onClick={handleConfirm}
-                className="w-full py-3 rounded-xl font-bold text-[15px] text-white transition-all hover:bg-[#008f86]"
+                disabled={joining || !notifyOk}
+                title={!notifyOk ? 'Please allow notifications to join' : undefined}
+                className="w-full py-3 rounded-xl font-bold text-[15px] text-white transition-all hover:bg-[#008f86] disabled:opacity-50"
                 style={{ background: '#00a79d', fontFamily: 'var(--font-body)' }}
               >
-                I'm in — Join Bubble
+                {joining ? 'Joining…' : "I'm in — Join Bubble"}
               </button>
               <button
                 onClick={onClose}

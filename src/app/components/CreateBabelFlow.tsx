@@ -5,9 +5,11 @@ import {
   Sprout, TrendingUp, Award,
   Check, CheckCircle2, Pencil, ChevronLeft, PartyPopper,
 } from "lucide-react";
+import { toast } from "sonner";
 import { useApp } from "../../context/AppContext";
 import type { Bubble, Session, BubbleLevel } from "../../types";
 import { BabelTransition } from "./BabelTransition";
+import { AuthModal } from "./AuthModal";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -94,7 +96,24 @@ const AI_PROMPTS: Record<StepKey, string> = {
 
 // ─── Session generator ────────────────────────────────────────────────────────
 
-function generateMockSessions(topic: string, level: BubbleLevel, frequency: Frequency = 'weekly'): Session[] {
+/** The next date (YYYY-MM-DD, local time) that falls on the given weekday, from tomorrow on. */
+function nextWeekday(day: string, from = new Date()): Date {
+  const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const target = days.indexOf(day);
+  const d = new Date(from.getFullYear(), from.getMonth(), from.getDate() + 1);
+  if (target >= 0) d.setDate(d.getDate() + ((target - d.getDay() + 7) % 7));
+  return d;
+}
+
+function toLocalIso(d: Date): string {
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+
+function generateMockSessions(
+  topic: string, level: BubbleLevel, frequency: Frequency = 'weekly',
+  start: Date = nextWeekday('Monday'), ledBy = '',
+): Session[] {
   const sessionTitles = [
     "Introduction & Foundations",
     "Core Concepts Deep Dive",
@@ -104,7 +123,6 @@ function generateMockSessions(topic: string, level: BubbleLevel, frequency: Freq
     "Final Project & Wrap-Up",
   ];
   const intervalDays = frequency === 'weekly' ? 7 : frequency === 'biweekly' ? 14 : 30;
-  const start = new Date('2026-03-18');
   const objectives = [
     `identify the core concepts that make ${topic} different from traditional approaches`,
     `explain the key frameworks from this program and apply one to a real example`,
@@ -114,19 +132,18 @@ function generateMockSessions(topic: string, level: BubbleLevel, frequency: Freq
     `present a complete project that incorporates at least three concepts from this program`,
   ];
   return sessionTitles.map((title, i) => {
-    const d = new Date(start);
-    d.setDate(d.getDate() + i * intervalDays);
+    const d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i * intervalDays);
     return {
       id: `new-s-${i + 1}`,
       number: i + 1,
       title,
       status: (i === 0 ? 'this-week' : 'draft') as Session['status'],
-      date: d.toISOString().split('T')[0],
+      date: toLocalIso(d),
       duration: 90,
       xp: 150,
       level,
       learningObjective: objectives[i],
-      ledBy: '',
+      ledBy,
       submissionTypes: ['link' as const],
       sections: [
         { id: `ns-${i}-0`, type: 'check-in'  as const, title: 'Check-in',        minutes: 10, whatHappens: 'Go around: each person says in one sentence what she did since last time.' },
@@ -269,10 +286,13 @@ function ScheduleWidget({ onSelect, locked }: {
   );
 }
 
+// Bubbles hold 2–8 learners (the database enforces it). Four is recommended,
+// not required: a Bubble can start with fewer and keeps accepting members.
 const SEAT_OPTIONS = [
-  { key: 'small',    label: 'Small',    range: '3–5 members',  desc: 'Intimate and focused',   value: 5,  recommended: false },
-  { key: 'standard', label: 'Standard', range: '6–8 members',  desc: 'Recommended',            value: 8,  recommended: true  },
-  { key: 'large',    label: 'Large',    range: '9+ members',   desc: 'For wider communities',  value: 12, recommended: false },
+  { key: 'tiny',     label: 'Tiny',     range: '2–3 members',  desc: 'A study pair or trio',       value: 3, recommended: false },
+  { key: 'standard', label: 'Standard', range: '4 members',    desc: 'Our recommendation',         value: 4, recommended: true  },
+  { key: 'medium',   label: 'Roomy',    range: '5–6 members',  desc: 'More voices, more energy',   value: 6, recommended: false },
+  { key: 'large',    label: 'Full',     range: '7–8 members',  desc: 'The widest a Bubble goes',   value: 8, recommended: false },
 ] as const;
 
 type SeatKey = typeof SEAT_OPTIONS[number]['key'];
@@ -281,7 +301,7 @@ function SeatsWidget({ onSelect, locked }: { onSelect: (n: number) => void; lock
   return (
     <div className="flex flex-col gap-3">
       <p className="text-[12px] text-[#6C757D]" style={{ fontFamily: 'var(--font-body)' }}>
-        We recommend 6–8 for the best learning experience.
+        We recommend 4. You can start with fewer, and others can join any time until it's full.
       </p>
       <div className="flex flex-col gap-2">
         {SEAT_OPTIONS.map(opt => (
@@ -452,7 +472,7 @@ function SessionsWidget({ topic, level, onConfirm, locked }: {
 
 export function CreateBabelFlow() {
   const navigate = useNavigate();
-  const { addBubble, currentUser } = useApp();
+  const { createBubble, currentUser, isLoggedIn, authReady } = useApp();
   const [data, setData]           = useState<Partial<BubbleData>>({});
   const [currentStep, setCurrentStep] = useState<StepKey>('topic');
   const [feed, setFeed]           = useState<FeedItem[]>([
@@ -462,7 +482,7 @@ export function CreateBabelFlow() {
   const [summaries, setSummaries] = useState<Partial<Record<StepKey, string>>>({});
   const [reEditStep, setReEditStep] = useState<StepKey | null>(null);
   const [phase, setPhase]         = useState<'wizard' | 'done'>('wizard');
-  const [createdBubble, setCreatedBubble] = useState<Bubble | null>(null);
+  const [createdBubble, setCreatedBubble] = useState<{ id: string; title: string; sessionCount: number } | null>(null);
   const [showTransition, setShowTransition] = useState(false);
   const activeWidgetRef = useRef<HTMLDivElement>(null);
 
@@ -509,28 +529,38 @@ export function CreateBabelFlow() {
   }
 
   function handleLaunch(finalData: BubbleData) {
-    const sessions = generateMockSessions(finalData.topic, finalData.level, finalData.frequency ?? 'weekly');
-    const newBubble: Bubble = {
-      id: `bubble-${Date.now()}`,
+    const sessions = generateMockSessions(
+      finalData.topic, finalData.level, finalData.frequency ?? 'weekly',
+      nextWeekday(finalData.day), currentUser?.id ?? '',
+    );
+    createBubble({
       title: finalData.topic,
       topic: finalData.topic,
       description: finalData.description,
       level: finalData.level,
-      status: 'open',
       maxSeats: finalData.seats,
-      takenSeats: 1,
       scheduleDay: finalData.day,
       scheduleTime: finalData.time,
-      startDate: 'Mar 18, 2026',
-      founderId: currentUser?.id ?? 'user-me',
-      memberIds: [currentUser?.id ?? 'user-me'],
+      startDate: sessions[0]?.date ?? null,
+      heroImage: finalData.heroImage ?? null,
       sessions,
-      resources: [],
-      heroImage: finalData.heroImage,
-    };
-    addBubble(newBubble);
-    setCreatedBubble(newBubble);
-    setPhase('done');
+    })
+      .then(newId => {
+        setCreatedBubble({ id: newId, title: finalData.topic, sessionCount: sessions.length });
+        setPhase('done');
+      })
+      .catch(err => {
+        console.error('Failed to create bubble', err);
+        toast.error(
+          err?.message?.includes('signed in')
+            ? 'Please sign in to create a Bubble.'
+            : 'Something went wrong creating your Bubble — nothing was lost, try again.',
+        );
+        // Unlock the last widget so she can retry.
+        setFeed(f => f.map(item =>
+          item.kind === 'widget' && item.step === 'sessions' ? { ...item, locked: false } : item,
+        ));
+      });
   }
 
   const stepIndex  = STEP_ORDER.indexOf(currentStep);
@@ -603,6 +633,12 @@ export function CreateBabelFlow() {
     }
   }
 
+  // Creating a Bubble requires an account — gate the wizard up front,
+  // not after six answered steps. (Placed after all hooks per React rules.)
+  if (authReady && !isLoggedIn) {
+    return <AuthModal onClose={() => navigate('/')} />;
+  }
+
   return (
     <div className="min-h-screen bg-[#F8F9FA] flex flex-col">
 
@@ -645,7 +681,7 @@ export function CreateBabelFlow() {
               {createdBubble.title}
             </p>
             <p className="text-[13px] text-[#6C757D] mt-1" style={{ fontFamily: 'var(--font-body)' }}>
-              {createdBubble.sessions.length} sessions drafted · ready to edit in Course Guide
+              {createdBubble.sessionCount} sessions drafted · ready to edit in Course Guide
             </p>
           </div>
           <button

@@ -9,9 +9,9 @@ export function AuthModal({ onClose, onSuccess }: Props) {
   const { login } = useApp();
 
   function handleGoogle() {
+    // Starts the real Google sign-in redirect; the page navigates away and
+    // returns signed in, so onSuccess is intentionally not called here.
     login();
-    onClose();
-    onSuccess?.();
   }
 
   return (
