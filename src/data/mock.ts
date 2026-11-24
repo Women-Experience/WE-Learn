@@ -246,22 +246,22 @@ function makeSessions(count: number, doneTo: number, founderId: string): Session
 function makeResources(founderId: string): Resource[] {
   return [
     {
-      id: 'r-1', type: 'article', title: 'Designing for AI: A Practical Guide',
-      url: 'https://nngroup.com/articles/ai-ux', description: 'NNg\'s comprehensive overview of UX patterns for AI-powered products.',
+      id: 'r-1', type: 'article', title: '10 Usability Heuristics Applied to AI',
+      url: 'https://www.nngroup.com/articles/ai-ux-heuristics/', description: 'NNg maps Nielsen\'s 10 heuristics to AI-specific failure modes — good frame for auditing any AI interface.',
       uploadedById: founderId, uploadedAt: 'Feb 10, 2026',
       watched: true, personalRating: 'up',
       communityRatings: [{ userId: 'user-dana', vote: 'up' }, { userId: 'user-shir', vote: 'up' }],
     },
     {
-      id: 'r-2', type: 'video', title: 'Figma Make Deep Dive — YouTube',
-      url: 'https://youtube.com', description: 'Full walkthrough of Figma Make for AI-assisted design workflows.',
+      id: 'r-2', type: 'video', title: 'Designing with AI — Google I/O 2024',
+      url: 'https://www.youtube.com/watch?v=4mAlFCxoAn4', description: '45-min talk on how Google redesigned Workspace features around Gemini. Strong on latency UX and trust signals.',
       uploadedById: 'user-dana', uploadedAt: 'Feb 14, 2026',
       watched: false, personalRating: null,
       communityRatings: [{ userId: founderId, vote: 'up' }],
     },
     {
-      id: 'r-3', type: 'tool', title: 'Maze — Usability Testing Platform',
-      url: 'https://maze.co', description: 'Great for unmoderated research on prototypes. Free tier is generous.',
+      id: 'r-3', type: 'tool', title: 'Maze — Rapid Usability Testing',
+      url: 'https://maze.co/usability-testing/', description: 'Run unmoderated tests on prototypes in hours. We used this for session 3\'s redesign — free tier covers most of what you need.',
       uploadedById: 'user-me', uploadedAt: 'Feb 20, 2026',
       watched: true, personalRating: 'up',
       communityRatings: [],

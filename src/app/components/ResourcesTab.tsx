@@ -183,7 +183,7 @@ function ResourceCard({
             style={{ fontFamily: 'var(--font-body)' }}>
             Cancel
           </button>
-          <button onClick={handleSave} disabled={!editTitle.trim() || !editUrl.trim()}
+          <button onClick={handleSave} disabled={!editTitle.trim() || !editUrl.trim() || !editDesc.trim()}
             className="px-4 py-2 rounded-lg bg-[#00a79d] text-white text-[13px] font-semibold hover:bg-[#008f86] transition-colors disabled:opacity-40"
             style={{ fontFamily: 'var(--font-body)' }}>
             Save
@@ -218,7 +218,7 @@ function ResourceCard({
                 </span>
                 {resource.watched && (
                   <span className="inline-flex items-center gap-1 text-[11px] text-[#40C057]" style={{ fontFamily: 'var(--font-body)' }}>
-                    <CheckCircle2 className="size-3" strokeWidth={2} /> Verified by uploader
+                    <CheckCircle2 className="size-3" strokeWidth={2} /> Watched by sharer
                   </span>
                 )}
               </div>
@@ -315,7 +315,7 @@ function UploadForm({ onSubmit, open, onOpenChange }: {
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!url || !title) return;
+    if (!url || !title || !desc.trim()) return;
     onSubmit({
       type, title, url, description: desc,
       uploadedById: currentUser?.id ?? 'user-me',
@@ -389,7 +389,7 @@ function UploadForm({ onSubmit, open, onOpenChange }: {
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <label className="text-[13px] font-medium text-[#495057]" style={{ fontFamily: 'var(--font-body)' }}>Short description</label>
+        <label className="text-[13px] font-medium text-[#495057]" style={{ fontFamily: 'var(--font-body)' }}>Description *</label>
         <textarea value={desc} onChange={e => setDesc(e.target.value)} rows={2}
           placeholder="Why are you sharing this? What's it about?"
           className="px-3 py-2 rounded-lg border border-[#E9ECEF] text-[14px] bg-[#F8F9FA] focus:outline-none focus:border-[#00a79d] resize-none"
@@ -422,8 +422,8 @@ function UploadForm({ onSubmit, open, onOpenChange }: {
           style={{ fontFamily: 'var(--font-body)' }}>
           Cancel
         </button>
-        <button type="submit"
-          className="px-5 py-2 rounded-xl bg-[#00a79d] text-white text-[13px] font-semibold hover:bg-[#008f86] transition-colors"
+        <button type="submit" disabled={!url.trim() || !title.trim() || !desc.trim()}
+          className="px-5 py-2 rounded-xl bg-[#00a79d] text-white text-[13px] font-semibold hover:bg-[#008f86] transition-colors disabled:opacity-40"
           style={{ fontFamily: 'var(--font-body)' }}>
           Share resource
         </button>
@@ -444,6 +444,7 @@ export function ResourcesTab({ bubble, isFounder }: { bubble: Bubble; isFounder:
 
   function addResource(partial: Omit<Resource, 'id' | 'communityRatings'>) {
     setResources(rs => [...rs, { ...partial, id: `r-${Date.now()}`, communityRatings: [] }]);
+    setFilter('all');
   }
 
   function deleteResource(id: string) {
