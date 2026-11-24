@@ -22,7 +22,8 @@ for f in "$HERE/00_supabase_stub.sql" "$M/001_initial_schema.sql" "$M/002_audit_
          "$HERE/01_seed_legacy.sql" "$M/003_platform_foundation.sql" \
          "$M/004_notifications_ownership_import.sql" "$HERE/02_helpers.sql" \
          "$HERE/03_scenarios_003.sql" "$HERE/04_scenarios_004.sql" \
-         "$M/005_course_guide_sessions.sql" "$HERE/05_scenarios_005.sql" "$HERE/99_report.sql"; do
+         "$M/005_course_guide_sessions.sql" "$HERE/05_scenarios_005.sql" \
+         "$M/006_group_progress.sql" "$HERE/06_scenarios_006.sql" "$HERE/99_report.sql"; do
   echo "== $(basename "$f")"
   psql -q -v ON_ERROR_STOP=1 -v "template=$TEMPLATE" -v "template_v1=$TEMPLATE_V1" -v "demo=$DEMO" -d "$DB" -f "$f" 2>&1 | grep -v '^$' | grep -v 'set_config\|^-\+$\|^(1 row)' || true
 done

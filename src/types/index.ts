@@ -117,6 +117,8 @@ export interface Session {
   preMaterials?: string;
   homework?: string;
   extraResources?: ExtraResource[];
+  /** Member ids who marked this session done (group progress). */
+  completedBy?: string[];
   // progress state
   projectUrl?: string;
   reflectionNote?: string;

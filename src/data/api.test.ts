@@ -275,6 +275,24 @@ describe('Course Guide sessions', () => {
   });
 });
 
+describe('group progress', () => {
+  it('marking done upserts my own row and ignores duplicates', async () => {
+    await api.setSessionComplete('s1', true);
+    expect(calls).toContain('from(session_completions)');
+    expect(calls.some(c => c.startsWith('upsert'))).toBe(true);
+  });
+
+  it('un-marking deletes only my row', async () => {
+    await api.setSessionComplete('s1', false);
+    expect(calls).toEqual(expect.arrayContaining(['delete()', 'eq(session_id,s1)', 'eq(user_id,user-1)']));
+  });
+
+  it('a refusal from the database is thrown', async () => {
+    outcome = { data: null, error: new Error('new row violates row-level security policy') };
+    await expect(api.setSessionComplete('s1', true)).rejects.toThrow(/row-level security/);
+  });
+});
+
 describe('WhatsApp link', () => {
   it('accepts only WhatsApp links', () => {
     expect(api.safeWhatsappLink(' https://chat.whatsapp.com/AbC ')).toBe('https://chat.whatsapp.com/AbC');

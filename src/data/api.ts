@@ -363,6 +363,17 @@ export async function fetchBubbleDetail(bubbleId: string, founderId = ''): Promi
 
   const sessions = (sessionsRes.data as SessionRow[]).map(r => mapSession(r, founderId));
 
+  // Group progress: who marked which session done (visible to Members only).
+  if (sessions.length) {
+    const { data: done } = await supabase
+      .from('session_completions')
+      .select('session_id, user_id')
+      .in('session_id', sessions.map(s => s.id));
+    for (const s of sessions) {
+      s.completedBy = (done ?? []).filter(d => d.session_id === s.id).map(d => d.user_id);
+    }
+  }
+
   // Merge MY per-member progress into each session (project/reflection/rating).
   const { data: { user } } = await supabase.auth.getUser();
   if (user && sessions.length) {
@@ -386,6 +397,27 @@ export async function fetchBubbleDetail(bubbleId: string, founderId = ''): Promi
     resources: resourceRows.map(r => mapResource(r, votes)),
     whatsappLink: (chatRes.data as { whatsapp_link: string } | null)?.whatsapp_link ?? undefined,
   };
+}
+
+/** Mark a session done (or not done) for ME. Each Member tracks her own. */
+export async function setSessionComplete(sessionId: string, done: boolean): Promise<void> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not signed in');
+  if (done) {
+    // Already done is fine (ON CONFLICT DO NOTHING); a refusal still errors.
+    const { error } = await supabase
+      .from('session_completions')
+      .upsert({ session_id: sessionId, user_id: user.id }, { onConflict: 'session_id,user_id', ignoreDuplicates: true });
+    if (error) throw error;
+  } else {
+    // Deliberately NOT assertTouched: un-marking something not marked is a no-op.
+    const { error } = await supabase
+      .from('session_completions')
+      .delete()
+      .eq('session_id', sessionId)
+      .eq('user_id', user.id);
+    if (error) throw error;
+  }
 }
 
 /** Save MY progress on a session (per-member; each woman's own). */
