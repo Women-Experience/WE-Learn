@@ -75,8 +75,8 @@ export function GroupProgressBanner({ sessions, members, meId, founderId }: {
                         {isMe ? 'You' : member.name}
                         {member.id === founderId && <span className="font-normal text-white/75"> · Founder</span>}
                       </p>
-                      <span className="text-[12px] text-white/85 shrink-0" style={body}>
-                        {done}/{p.total}{done === p.total ? ' 🎉' : ''}
+                      <span className="text-[12px] text-white/85 shrink-0 tabular-nums" style={body}>
+                        {done}/{p.total} · <strong className="text-white font-semibold">{pct}%</strong>{done === p.total ? ' 🎉' : ''}
                       </span>
                     </div>
                     <div className="bg-white/25 rounded-full h-1.5 mt-1">
