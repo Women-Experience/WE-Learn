@@ -1,14 +1,17 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router";
 import { toast } from "sonner";
-import { BookOpen, Users, FolderOpen, Share2, ArrowRight, Crown, Calendar, Clock, Info, X, ChevronLeft, Search, MoreVertical, Pencil, Trash2, Copy, Eye, EyeOff, Check, MessageCircle, LogOut, RefreshCw } from "lucide-react";
+import { BookOpen, Users, FolderOpen, Share2, ArrowRight, Crown, Calendar, Clock, Info, X, ChevronLeft, Search, MoreVertical, Pencil, Archive, GitFork, Copy, Eye, EyeOff, Check, MessageCircle, LogOut, RefreshCw } from "lucide-react";
 import { useApp } from "../../context/AppContext";
-import { getBubbleById, getBubbleMembers } from "../../data/mock";
+import { getBubbleMembers } from "../../data/display";
+import { leaveWaitlist, transferFounder, errorMessage } from "../../data/api";
 import { SyllabusTab } from "./SyllabusTab";
 import { MembersTab } from "./MembersTab";
 import { ResourcesTab } from "./ResourcesTab";
 import { JoinBubbleModal } from "./JoinBubbleModal";
 import { AuthModal } from "./AuthModal";
+import { ForkBubbleModal } from "./ForkBubbleModal";
+import { NotificationBell } from "./NotificationBell";
 import type { Bubble } from "../../types";
 
 type Tab = 'syllabus' | 'members' | 'resources';
@@ -48,7 +51,7 @@ function AvatarStackSmall({ avatars, onClick }: { avatars: string[]; onClick?: (
 export function GroupPage() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
-  const { bubbles, currentUser, isFounder, isJoined, isLoggedIn, addRecentBubble, updateBubble, deleteBubble, addBubble, leaveBubble } = useApp();
+  const { bubbles, bubblesLoading, currentUser, isFounder, isJoined, isLoggedIn, authReady, addRecentBubble, updateBubble, closeBubble, leaveBubble, refreshBubbles, loadBubbleDetail, refreshUser } = useApp();
 
   const [activeTab, setActiveTab]       = useState<Tab>('syllabus');
   const [guestPreview, setGuestPreview] = useState(false);
@@ -57,7 +60,8 @@ export function GroupPage() {
   const [showAuth, setShowAuth] = useState(false);
   const [bubbleMenuOpen, setBubbleMenuOpen] = useState(false);
   const [editingBubble, setEditingBubble]   = useState(false);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showCloseConfirm, setShowCloseConfirm] = useState(false);
+  const [showFork, setShowFork] = useState(false);
   const [editTitle, setEditTitle] = useState('');
   const [editDescription, setEditDescription] = useState('');
   const [editScheduleDay, setEditScheduleDay] = useState('');
@@ -80,13 +84,28 @@ export function GroupPage() {
   }, [bubbleMenuOpen]);
 
   // Find bubble from context (includes newly created ones)
-  const bubble = bubbles.find(b => b.id === id) ?? getBubbleById(id ?? '');
+  const bubble = bubbles.find(b => b.id === id);
 
   // Track this bubble as "recently viewed" for smart search
   useEffect(() => {
     if (bubble) addRecentBubble(bubble.id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bubble?.id]);
+
+  // Load syllabus + resources from the database (once per bubble, when signed in)
+  useEffect(() => {
+    if (bubble && isLoggedIn && !bubble.detailLoaded) loadBubbleDetail(bubble.id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bubble?.id, bubble?.detailLoaded, isLoggedIn]);
+
+  // Still fetching the bubble list — show a quiet loading state, not "not found"
+  if (!bubble && bubblesLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <div className="size-10 rounded-full border-4 border-[#E5F5F4] border-t-[#00a79d] animate-spin" />
+      </div>
+    );
+  }
 
   if (!bubble) {
     return (
@@ -112,8 +131,9 @@ export function GroupPage() {
   const founder = members.find(m => m.id === bubble.founderId);
   const isUserFounder = isFounder(bubble.id) && !guestPreview;
 
-  const userId = currentUser?.id ?? 'user-me';
-  const userJoined = (hasJoined || isJoined(bubble.id) || bubble.memberIds.includes(userId)) && !guestPreview;
+  const userId = currentUser?.id;
+  const userJoined = (hasJoined || isJoined(bubble.id) || (!!userId && bubble.memberIds.includes(userId))) && !guestPreview;
+  const isWaitlisted = (currentUser?.waitlistedBubbles ?? []).includes(bubble.id) && !guestPreview;
 
   const tabs: { id: Tab; label: string; icon: typeof BookOpen; founderOnly?: boolean }[] = [
     { id: 'syllabus',  label: 'Course Guide',  icon: BookOpen, founderOnly: false },
@@ -164,13 +184,29 @@ export function GroupPage() {
               </button>
             )}
 
-            {/* User avatar */}
-            {currentUser && (
-              <div className="size-8 rounded-full overflow-hidden border-2"
+            {currentUser && <NotificationBell />}
+
+            {/* User avatar / sign-in */}
+            {currentUser ? (
+              <div className="size-8 rounded-full overflow-hidden border-2 bg-[#E5F5F4] flex items-center justify-center"
                 style={{ borderColor: guestPreview ? '#E9ECEF' : '#00a79d' }}>
-                <img src={currentUser.avatar} alt={currentUser.name} className="size-full object-cover" />
+                {currentUser.avatar ? (
+                  <img src={currentUser.avatar} alt={currentUser.name} className="size-full object-cover" />
+                ) : (
+                  <span className="text-[12px] font-bold text-[#008f86]" style={{ fontFamily: 'var(--font-display)' }}>
+                    {currentUser.name.charAt(0).toUpperCase()}
+                  </span>
+                )}
               </div>
-            )}
+            ) : authReady ? (
+              <button
+                onClick={() => setShowAuth(true)}
+                className="text-[13px] font-semibold text-[#00a79d] hover:underline shrink-0"
+                style={{ fontFamily: 'var(--font-body)' }}
+              >
+                Sign in
+              </button>
+            ) : null}
           </div>
         </div>
       </header>
@@ -263,6 +299,26 @@ export function GroupPage() {
                   <p className="text-[14px] text-[#6C757D] mb-3" style={{ fontFamily: 'var(--font-body)' }}>
                     {bubble.description}
                   </p>
+                  {bubble.creditChain && bubble.creditChain.length > 0 && (
+                    <p className="text-[12px] text-[#6C757D] mb-3 flex items-center gap-1.5"
+                      style={{ fontFamily: 'var(--font-body)' }}
+                      title={bubble.creditChain.map(c => `${c.title} (${c.author})`).join(' → ')}>
+                      <GitFork className="size-3.5 shrink-0" strokeWidth={1.75} />
+                      <span>
+                        Based on{' '}
+                        {bubble.forkedFrom ? (
+                          <button onClick={() => navigate(`/group/${bubble.forkedFrom}`)}
+                            className="font-semibold text-[#008f86] hover:underline">
+                            {bubble.creditChain[bubble.creditChain.length - 1].title}
+                          </button>
+                        ) : (
+                          <strong>{bubble.creditChain[bubble.creditChain.length - 1].title}</strong>
+                        )}
+                        {' '}by {bubble.creditChain[bubble.creditChain.length - 1].author}
+                        {bubble.creditChain.length > 1 && ` and ${bubble.creditChain.length - 1} earlier`}
+                      </span>
+                    </p>
+                  )}
                 </>
               )}
 
@@ -318,6 +374,18 @@ export function GroupPage() {
                   <Share2 className="size-4" strokeWidth={1.75} />
                   <span className="hidden sm:inline">Share</span>
                 </button>
+                {/* Fork — any signed-in woman can open her own Bubble on this syllabus */}
+                {currentUser && !guestPreview && !isUserFounder && (
+                  <button
+                    onClick={() => setShowFork(true)}
+                    className="flex items-center gap-1.5 min-h-[36px] px-3 py-2 rounded-lg border border-[#E9ECEF] text-[13px] text-[#495057] hover:border-[#00a79d] hover:text-[#00a79d] transition-colors"
+                    style={{ fontFamily: 'var(--font-body)' }}
+                    title="Open your own Bubble on this syllabus"
+                  >
+                    <GitFork className="size-4" strokeWidth={1.75} />
+                    <span className="hidden sm:inline">Fork</span>
+                  </button>
+                )}
                 {/* ⋮ menu — founder + joined members */}
                 {(isUserFounder || (userJoined && !isUserFounder)) && (
                   <div ref={bubbleMenuRef} className="relative">
@@ -348,18 +416,10 @@ export function GroupPage() {
                           </button>
                           <button
                             onClick={() => {
-                              const newBubble: Bubble = {
-                                ...bubble,
-                                id: `bubble-${Date.now()}`,
-                                title: `${bubble.title} (copy)`,
-                                founderId: currentUser!.id,
-                                memberIds: [currentUser!.id],
-                                takenSeats: 1,
-                                status: 'open',
-                              };
-                              addBubble(newBubble);
+                              // Duplicating = forking your own Bubble: the server copies the
+                              // syllabus into a new Bubble you found (credit chain included).
+                              setShowFork(true);
                               setBubbleMenuOpen(false);
-                              toast.success('Bubble duplicated');
                             }}
                             className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-[13px] text-[#212529] hover:bg-[#F8F9FA] transition-colors text-left"
                             style={{ fontFamily: 'var(--font-body)' }}
@@ -379,11 +439,11 @@ export function GroupPage() {
                           </button>
                           <div className="h-px bg-[#E9ECEF] mx-3" />
                           <button
-                            onClick={() => { setShowDeleteConfirm(true); setBubbleMenuOpen(false); }}
+                            onClick={() => { setShowCloseConfirm(true); setBubbleMenuOpen(false); }}
                             className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-[13px] text-[#FA5252] hover:bg-[#FFF5F5] transition-colors text-left"
                             style={{ fontFamily: 'var(--font-body)' }}
                           >
-                            <Trash2 className="size-4 shrink-0" strokeWidth={1.75} /> Delete bubble
+                            <Archive className="size-4 shrink-0" strokeWidth={1.75} /> Close Bubble
                           </button>
                         </>)}
                         {!isUserFounder && userJoined && (
@@ -426,19 +486,45 @@ export function GroupPage() {
               >Cancel</button>
               <button
                 onClick={() => {
+                  setEditingBubble(false);
                   updateBubble(bubble.id, {
                     title: editTitle.trim() || bubble.title,
                     description: editDescription.trim() || bubble.description,
                     scheduleDay: editScheduleDay || bubble.scheduleDay,
                     scheduleTime: editScheduleTime.trim() || bubble.scheduleTime,
-                    whatsappLink: editWhatsappLink.trim() || undefined,
-                  });
-                  setEditingBubble(false);
-                  toast.success('Bubble updated');
+                    whatsappLink: editWhatsappLink.trim(),
+                  })
+                    .then(() => toast.success('Bubble updated'))
+                    .catch(err => toast.error(err instanceof Error && err.message.includes('WhatsApp')
+                      ? err.message
+                      : 'Could not save — your changes were reverted.'));
                 }}
                 className="px-4 py-2 rounded-lg bg-[#00a79d] text-white text-[13px] font-semibold hover:bg-[#008f86] transition-colors"
                 style={{ fontFamily: 'var(--font-body)' }}
               >Save</button>
+            </div>
+          ) : isWaitlisted && !userJoined ? (
+            <div className="mt-4 pt-4 border-t border-[#F1F3F5] flex items-center justify-between gap-3 flex-wrap">
+              <p className="text-[13px] text-[#6C757D]" style={{ fontFamily: 'var(--font-body)' }}>
+                You're on the waitlist — the founder can admit you when a seat opens.
+              </p>
+              <button
+                onClick={() => {
+                  leaveWaitlist(bubble.id)
+                    .then(() => { toast.success('Removed from waitlist'); refreshUser(); })
+                    .catch(() => toast.error('Could not update the waitlist'));
+                }}
+                className="shrink-0 min-h-[44px] px-5 py-2.5 rounded-xl border border-[#E9ECEF] text-[#6C757D] text-[14px] font-semibold hover:bg-[#F8F9FA] transition-colors"
+                style={{ fontFamily: 'var(--font-body)' }}
+              >
+                Leave waitlist
+              </button>
+            </div>
+          ) : bubble.status === 'closed' ? (
+            <div className="mt-4 pt-4 border-t border-[#F1F3F5]">
+              <p className="text-[13px] text-[#6C757D]" style={{ fontFamily: 'var(--font-body)' }}>
+                This Bubble is closed and no longer accepts members. You can still open your own Bubble on its syllabus with Fork.
+              </p>
             </div>
           ) : !isUserFounder && !userJoined ? (
             <div className="mt-4 pt-4 border-t border-[#F1F3F5] flex items-center justify-between gap-3 flex-wrap">
@@ -520,15 +606,22 @@ export function GroupPage() {
 
       {/* ── Tab Content ── */}
       <div className="max-w-5xl mx-auto w-full px-4 sm:px-6 py-6 flex-1">
-        {activeTab === 'syllabus'  && (
+        {/* Tabs stay mounted (hidden with CSS) so in-progress edits and local
+            state survive tab switches. */}
+        <div style={{ display: activeTab === 'syllabus' ? undefined : 'none' }}>
           <SyllabusTab
             bubble={bubble}
             isFounder={isUserFounder}
+            isAuthor={isUserFounder}
             userJoined={userJoined || isUserFounder}
           />
-        )}
-        {activeTab === 'members'   && <MembersTab   bubble={bubble} isFounder={isUserFounder} onJoin={handleJoinClick} />}
-        {activeTab === 'resources' && <ResourcesTab bubble={bubble} isFounder={isUserFounder} />}
+        </div>
+        <div style={{ display: activeTab === 'members' ? undefined : 'none' }}>
+          <MembersTab bubble={bubble} isFounder={isUserFounder} onJoin={handleJoinClick} />
+        </div>
+        <div style={{ display: activeTab === 'resources' ? undefined : 'none' }}>
+          <ResourcesTab bubble={bubble} isFounder={isUserFounder} />
+        </div>
       </div>
 
       {/* ── Auth Modal ── */}
@@ -551,38 +644,42 @@ export function GroupPage() {
         />
       )}
 
-      {/* ── Delete Bubble Confirmation ── */}
-      {showDeleteConfirm && (
+      {/* ── Fork Modal ── */}
+      {showFork && <ForkBubbleModal bubble={bubble} onClose={() => setShowFork(false)} />}
+
+      {/* ── Close Bubble Confirmation ── */}
+      {showCloseConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowDeleteConfirm(false)} />
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowCloseConfirm(false)} />
           <div className="relative bg-white rounded-2xl w-full max-w-sm overflow-hidden"
             style={{ boxShadow: '0 24px 64px rgba(0,0,0,0.18)' }}>
             <div className="px-6 pt-6 pb-5">
-              <div className="size-12 bg-[#FFF5F5] rounded-2xl flex items-center justify-center mb-4">
-                <Trash2 className="size-6 text-[#FA5252]" strokeWidth={1.75} />
+              <div className="size-12 bg-[#FFF3CD] rounded-2xl flex items-center justify-center mb-4">
+                <Archive className="size-6 text-[#856404]" strokeWidth={1.75} />
               </div>
               <h3 className="font-bold text-[17px] text-[#212529] mb-1" style={{ fontFamily: 'var(--font-display)' }}>
-                Delete this Bubble?
+                Close this Bubble?
               </h3>
               <p className="text-[14px] text-[#6C757D] mb-5" style={{ fontFamily: 'var(--font-body)' }}>
-                "{bubble.title}" will be permanently removed. This cannot be undone.
+                "{bubble.title}" will stop accepting members and members' seats are released. Nothing is deleted:
+                the syllabus stays and anyone can still fork it. Only an Admin can reopen a closed Bubble.
               </p>
               <div className="flex gap-3">
                 <button
-                  onClick={() => setShowDeleteConfirm(false)}
+                  onClick={() => setShowCloseConfirm(false)}
                   className="flex-1 py-2.5 rounded-xl border border-[#E9ECEF] text-[14px] text-[#6C757D] hover:bg-[#F8F9FA] transition-colors"
                   style={{ fontFamily: 'var(--font-body)' }}
                 >Cancel</button>
                 <button
                   onClick={() => {
-                    deleteBubble(bubble.id);
-                    setShowDeleteConfirm(false);
-                    toast.success('Bubble deleted');
-                    navigate('/');
+                    setShowCloseConfirm(false);
+                    closeBubble(bubble.id)
+                      .then(() => toast.success('Bubble closed'))
+                      .catch(() => toast.error('Could not close this Bubble.'));
                   }}
-                  className="flex-1 py-2.5 rounded-xl bg-[#FA5252] text-white text-[14px] font-semibold hover:bg-[#E03131] transition-colors"
+                  className="flex-1 py-2.5 rounded-xl bg-[#00a79d] text-white text-[14px] font-semibold hover:bg-[#008f86] transition-colors"
                   style={{ fontFamily: 'var(--font-body)' }}
-                >Delete</button>
+                >Close Bubble</button>
               </div>
             </div>
           </div>
@@ -613,10 +710,10 @@ export function GroupPage() {
                 >Cancel</button>
                 <button
                   onClick={() => {
-                    leaveBubble(bubble.id);
                     setShowLeaveConfirm(false);
-                    setHasJoined(false);
-                    toast.success('Left the Bubble');
+                    leaveBubble(bubble.id)
+                      .then(() => { setHasJoined(false); toast.success('Left the Bubble'); })
+                      .catch(() => toast.error('Could not leave this Bubble — please try again.'));
                   }}
                   className="flex-1 py-2.5 rounded-xl bg-[#FA5252] text-white text-[14px] font-semibold hover:bg-[#E03131] transition-colors"
                   style={{ fontFamily: 'var(--font-body)' }}
@@ -680,9 +777,14 @@ export function GroupPage() {
                   <button
                     disabled={!transferToId}
                     onClick={() => {
-                      updateBubble(bubble.id, { founderId: transferToId });
                       setShowTransfer(false);
-                      toast.success('Ownership transferred');
+                      transferFounder(bubble.id, transferToId)
+                        .then(() => {
+                          toast.success('Ownership transferred');
+                          refreshBubbles();
+                          refreshUser();
+                        })
+                        .catch(err => toast.error(errorMessage(err, 'Could not transfer ownership.')));
                     }}
                     className="flex-1 py-2.5 rounded-xl bg-[#00a79d] text-white text-[14px] font-semibold hover:bg-[#008f86] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                     style={{ fontFamily: 'var(--font-body)' }}

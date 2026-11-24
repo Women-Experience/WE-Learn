@@ -5,9 +5,10 @@ import {
   Pencil, Trash2, Plus, X, MoreVertical,
 } from "lucide-react";
 import { toast } from "sonner";
-import type { Bubble, Resource, ResourceType } from "../../types";
+import type { Bubble, Member, Resource, ResourceType } from "../../types";
 import { useApp } from "../../context/AppContext";
-import { getMemberById } from "../../data/mock";
+import { getBubbleMemberById } from "../../data/display";
+import * as api from "../../data/api";
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
@@ -68,6 +69,7 @@ function DeleteConfirmModal({
 
 function ResourceCard({
   resource,
+  uploader,
   canDelete,
   canEdit,
   onDelete,
@@ -75,6 +77,7 @@ function ResourceCard({
   onSave,
 }: {
   resource: Resource;
+  uploader?: Member;
   canDelete: boolean;
   canEdit: boolean;
   onDelete: () => void;
@@ -85,7 +88,6 @@ function ResourceCard({
   const TypeIcon = cfg.icon;
   const upCount   = resource.communityRatings.filter(r => r.vote === 'up').length;
   const downCount = resource.communityRatings.filter(r => r.vote === 'down').length;
-  const uploader  = getMemberById(resource.uploadedById);
 
   const [menuOpen, setMenuOpen]     = useState(false);
   const [isEditing, setIsEditing]   = useState(false);
@@ -318,7 +320,7 @@ function UploadForm({ onSubmit, open, onOpenChange }: {
     if (!url || !title || !desc.trim()) return;
     onSubmit({
       type, title, url, description: desc,
-      uploadedById: currentUser?.id ?? 'user-me',
+      uploadedById: currentUser?.id ?? '',
       uploadedAt: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
       watched, personalRating: rating,
     });
@@ -435,43 +437,76 @@ function UploadForm({ onSubmit, open, onOpenChange }: {
 // ─── ResourcesTab ─────────────────────────────────────────────────────────────
 
 export function ResourcesTab({ bubble, isFounder }: { bubble: Bubble; isFounder: boolean }) {
-  const { currentUser } = useApp();
+  const { currentUser, isLoggedIn, isJoined } = useApp();
+  const isMember = isFounder || isJoined(bubble.id);
   const [resources, setResources] = useState<Resource[]>(bubble.resources);
   const [filter, setFilter] = useState<ResourceType | 'all'>('all');
   const [showAddResource, setShowAddResource] = useState(false);
 
+  // Keep in sync when resources arrive/change from the database
+  useEffect(() => {
+    setResources(bubble.resources);
+  }, [bubble.resources]);
+
   const filtered = resources.filter(r => filter === 'all' || r.type === filter);
 
   function addResource(partial: Omit<Resource, 'id' | 'communityRatings'>) {
-    setResources(rs => [...rs, { ...partial, id: `r-${Date.now()}`, communityRatings: [] }]);
-    setFilter('all');
+    api.addResourceRow(bubble.id, {
+      type: partial.type,
+      title: partial.title,
+      url: partial.url,
+      description: partial.description,
+      watched: partial.watched,
+      personalRating: partial.personalRating,
+    })
+      .then(id => {
+        setResources(rs => [...rs, {
+          ...partial,
+          id,
+          uploadedById: currentUser?.id ?? partial.uploadedById,
+          communityRatings: [],
+        }]);
+        setFilter('all');
+      })
+      .catch(() => toast.error('Could not save this resource — please try again.'));
   }
 
   function deleteResource(id: string) {
     const snapshot = [...resources];
     setResources(rs => rs.filter(r => r.id !== id));
-    toast('Resource deleted', {
-      duration: 5000,
-      action: {
-        label: 'Undo',
-        onClick: () => setResources(snapshot),
-      },
+    api.deleteResourceRow(id).catch(() => {
+      setResources(snapshot);
+      toast.error('Could not delete this resource');
     });
+    toast('Resource deleted', { duration: 5000 });
   }
 
   function saveResource(updated: Resource) {
     setResources(rs => rs.map(r => r.id === updated.id ? updated : r));
+    api.updateResourceRow(updated.id, {
+      title: updated.title,
+      url: updated.url,
+      description: updated.description,
+      type: updated.type,
+      watched: updated.watched,
+      personalRating: updated.personalRating,
+    }).catch(() => toast.error('Could not save your changes'));
   }
 
   function vote(resourceId: string, v: 'up' | 'down') {
     if (!currentUser) return;
+    const existing = resources
+      .find(r => r.id === resourceId)?.communityRatings
+      .find(cr => cr.userId === currentUser.id);
+    const nextVote: 'up' | 'down' | null = existing && existing.vote === v ? null : v;
     setResources(rs => rs.map(r => {
       if (r.id !== resourceId) return r;
-      const existing = r.communityRatings.find(cr => cr.userId === currentUser.id);
       let updated = r.communityRatings.filter(cr => cr.userId !== currentUser.id);
-      if (!existing || existing.vote !== v) updated = [...updated, { userId: currentUser.id, vote: v }];
+      if (nextVote) updated = [...updated, { userId: currentUser.id, vote: nextVote }];
       return { ...r, communityRatings: updated };
     }));
+    api.voteOnResource(resourceId, nextVote)
+      .catch(() => toast.error('Could not record your vote'));
   }
 
   const allTypes = [...new Set(resources.map(r => r.type))];
@@ -488,14 +523,16 @@ export function ResourcesTab({ bubble, isFounder }: { bubble: Bubble; isFounder:
             {resources.length} shared by members
           </p>
         </div>
-        <button
-          onClick={() => setShowAddResource(true)}
-          className="flex items-center gap-1.5 px-3.5 py-2 min-h-[44px] rounded-xl bg-[#00a79d] text-white text-[14px] font-semibold hover:bg-[#008f86] transition-colors shrink-0"
-          style={{ fontFamily: 'var(--font-body)' }}
-        >
-          <Plus className="size-4" strokeWidth={1.75} />
-          Add Resource
-        </button>
+        {isMember && (
+          <button
+            onClick={() => setShowAddResource(true)}
+            className="flex items-center gap-1.5 px-3.5 py-2 min-h-[44px] rounded-xl bg-[#00a79d] text-white text-[14px] font-semibold hover:bg-[#008f86] transition-colors shrink-0"
+            style={{ fontFamily: 'var(--font-body)' }}
+          >
+            <Plus className="size-4" strokeWidth={1.75} />
+            Add Resource
+          </button>
+        )}
       </div>
 
       {/* Type filters */}
@@ -532,7 +569,11 @@ export function ResourcesTab({ bubble, isFounder }: { bubble: Bubble; isFounder:
       {/* List */}
       {filtered.length === 0 ? (
         <div className="text-center py-12 text-[#6C757D]" style={{ fontFamily: 'var(--font-body)' }}>
-          No resources yet. Be the first to share something!
+          {!isLoggedIn
+            ? 'Sign in to see this Bubble\'s shared resources.'
+            : !isMember
+              ? 'Resources are shared privately within the Bubble — join to see them.'
+              : 'No resources yet. Be the first to share something!'}
         </div>
       ) : (
         <div className="flex flex-col gap-3">
@@ -540,6 +581,7 @@ export function ResourcesTab({ bubble, isFounder }: { bubble: Bubble; isFounder:
             <ResourceCard
               key={r.id}
               resource={r}
+              uploader={getBubbleMemberById(bubble, r.uploadedById)}
               canDelete={isFounder || r.uploadedById === currentUser?.id}
               canEdit={r.uploadedById === currentUser?.id}
               onDelete={() => deleteResource(r.id)}
@@ -550,12 +592,14 @@ export function ResourcesTab({ bubble, isFounder }: { bubble: Bubble; isFounder:
         </div>
       )}
 
-      {/* Add Resource form — shown when triggered from header button or dashed card */}
-      <UploadForm
-        onSubmit={r => { addResource(r); setShowAddResource(false); }}
-        open={showAddResource}
-        onOpenChange={setShowAddResource}
-      />
+      {/* Add Resource form — members only */}
+      {isMember && (
+        <UploadForm
+          onSubmit={r => { addResource(r); setShowAddResource(false); }}
+          open={showAddResource}
+          onOpenChange={setShowAddResource}
+        />
+      )}
     </div>
   );
 }

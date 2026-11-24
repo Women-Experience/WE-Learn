@@ -6,7 +6,9 @@ export interface User {
   email: string;
   avatar: string;
   title: string; // professional title e.g. "UX Designer"
-  joinedBubbles: string[]; // bubble IDs
+  joinedBubbles: string[];     // bubble IDs
+  waitlistedBubbles: string[]; // bubble IDs where I'm on the waitlist
+  notifyConsent: boolean;
 }
 
 // ─── Bubble ───────────────────────────────────────────────────────────────────
@@ -29,17 +31,50 @@ export interface Bubble {
   description: string;
   level: BubbleLevel;
   status: BubbleStatus;
-  maxSeats: number;       // always 4–8
+  maxSeats: number;       // always 2–8 (4 recommended)
   takenSeats: number;
   scheduleDay: string;    // "Tuesday"
   scheduleTime: string;   // "7:00 PM"
   startDate: string;      // "Mar 14, 2026"
   founderId: string;
+  forkedFrom?: string;    // bubble id this one was forked from
+  creditChain?: CreditEntry[]; // oldest first; immutable
   memberIds: string[];
+  members?: Member[];     // populated from the database when signed in
   sessions: Session[];
   resources: Resource[];
   heroImage?: string;
   whatsappLink?: string;
+  detailLoaded?: boolean; // true once sessions/resources have been fetched
+}
+
+export interface CreditEntry { bubbleId: string; title: string; author: string }
+
+// ─── Notifications & ownership requests ───────────────────────────────────────
+
+export type NotificationKind =
+  | 'ownership_request' | 'ownership_accepted' | 'ownership_declined'
+  | 'ownership_escalated' | 'ownership_for_admin' | 'info';
+
+export interface AppNotification {
+  id: string;
+  kind: NotificationKind;
+  bubbleId: string | null;
+  message: string;
+  read: boolean;
+  createdAt: string;
+}
+
+export type OwnershipStatus = 'pending' | 'escalated' | 'accepted' | 'declined' | 'withdrawn';
+
+export interface OwnershipRequest {
+  id: string;
+  bubbleId: string;
+  requesterId: string;
+  requesterName: string;
+  message: string;
+  status: OwnershipStatus;
+  dueAt: string;
 }
 
 // ─── Session ──────────────────────────────────────────────────────────────────

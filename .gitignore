@@ -4,3 +4,7 @@ dist/
 *.local
 .env
 .DS_Store
+
+# local-only
+_legacy-firebase-version/
+.claude/

@@ -4,10 +4,12 @@ import {
   CheckCircle2, Circle, CalendarCheck,
   MessageSquare, RotateCcw, BookOpen, Users, Zap, Flag,
   Plus, MoreVertical, Pencil, Copy, ChevronRight, ChevronUp, ChevronDown, Trash2,
-  Check, Link2, Paperclip, AlignLeft, Image as ImageIcon, Target,
+  Check, Link2, Paperclip, AlignLeft, Image as ImageIcon, Target, Upload,
 } from "lucide-react";
-import type { Bubble, Session, SessionStatus, BubbleLevel, SessionSection, ExtraResource, SectionType, SubmissionType } from "../../types";
-import { getMemberById } from "../../data/mock";
+import type { Bubble, Member, Session, SessionStatus, BubbleLevel, SessionSection, ExtraResource, SectionType, SubmissionType } from "../../types";
+import { ImportSyllabusModal } from "./ImportSyllabusModal";
+import * as api from "../../data/api";
+import { useApp } from "../../context/AppContext";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -230,12 +232,12 @@ function Label({ children, required }: { children: React.ReactNode; required?: b
 // ─── Session Card ─────────────────────────────────────────────────────────────
 
 function SessionCard({
-  session, isFirst, isLast, isMenuOpen, isEditing, isAuthor, memberIds,
+  session, isFirst, isLast, isMenuOpen, isEditing, isAuthor, members,
   onOpenMenu, onCloseMenu, onStartEdit, onSaveEdit, onCancelEdit,
   onDuplicate, onMoveUp, onMoveDown, onRequestDelete,
 }: {
   session: Session; isFirst: boolean; isLast: boolean; isMenuOpen: boolean;
-  isEditing: boolean; isAuthor: boolean; memberIds: string[];
+  isEditing: boolean; isAuthor: boolean; members: Member[];
   onOpenMenu: () => void; onCloseMenu: () => void; onStartEdit: () => void;
   onSaveEdit: (updates: Partial<Session>) => void; onCancelEdit: () => void;
   onDuplicate: () => void; onMoveUp: () => void; onMoveDown: () => void;
@@ -294,7 +296,7 @@ function SessionCard({
 
   const cfg = STATUS_CFG[session.status];
   const sNum = `S${String(session.number).padStart(2, '0')}`;
-  const ledByName = getMemberById(session.ledBy)?.name ?? session.ledBy;
+  const getMemberById = (id: string) => members.find(m => m.id === id);
   const totalMinutes = session.sections.reduce((sum, s) => sum + s.minutes, 0);
 
   return (
@@ -711,15 +713,31 @@ interface Props {
   userJoined?: boolean;
 }
 
-export function SyllabusTab({ bubble, isFounder, isAuthor = true, userJoined = true }: Props) {
+// isAuthor defaults to FALSE: editing controls render only when the parent
+// explicitly passes founder rights (learners never see edit menus). The
+// database enforces the same rule on every save.
+export function SyllabusTab({ bubble, isFounder, isAuthor = false, userJoined = true }: Props) {
+  const { isLoggedIn } = useApp();
   const [sessions, setSessions] = useState<Session[]>(bubble.sessions);
   const [openMenuId, setOpenMenuId]   = useState<string | null>(null);
-  const [editingId, setEditingId]     = useState<string | null>(() => {
-    const first = bubble.sessions[0];
-    if (first && first.status === 'draft' && first.learningObjective === '') return first.id;
-    return null;
-  });
+  const [editingId, setEditingId]     = useState<string | null>(null);
+  const [showImport, setShowImport]   = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{ session: Session; index: number } | null>(null);
+  const autoOpened = useRef(false);
+
+  // Keep in sync when the syllabus arrives/changes from the database.
+  // The first time it arrives, open the first session for editing if the
+  // author hasn't written it yet (e.g. straight after the create wizard).
+  useEffect(() => {
+    setSessions(bubble.sessions);
+    if (!autoOpened.current && bubble.detailLoaded) {
+      autoOpened.current = true;
+      const first = bubble.sessions[0];
+      if (isAuthor && first && first.status === 'draft' && first.learningObjective === '') {
+        setEditingId(first.id);
+      }
+    }
+  }, [bubble.sessions, bubble.detailLoaded, isAuthor]);
 
   const doneCount  = sessions.filter(s => s.status === 'done').length;
   const progressPct = sessions.length > 0 ? Math.round((doneCount / sessions.length) * 100) : 0;
@@ -728,11 +746,22 @@ export function SyllabusTab({ bubble, isFounder, isAuthor = true, userJoined = t
     return ss.map((s, i) => ({ ...s, number: i + 1 }));
   }
 
-  function addSession() {
+  /** Persist the current ordering (session numbers) after move/duplicate/undo. */
+  function persistOrder(ss: Session[]) {
+    api.renumberSessions(ss.map((s, i) => ({ id: s.id, number: i + 1 })))
+      .catch(() => toast.error('Could not save the new order'));
+  }
+
+  /** Give freshly saved steps their database ids. */
+  function withSectionIds(s: Session, ids: string[]): Session {
+    return { ...s, sections: s.sections.map((sec, i) => ({ ...sec, id: ids[i] ?? sec.id })) };
+  }
+
+  async function addSession() {
     const ts = Date.now();
     const today = new Date().toISOString().split('T')[0];
     const newId = `session-${ts}`;
-    const newSession: Session = {
+    const draft: Session = {
       id: newId,
       number: sessions.length + 1,
       title: 'New Session',
@@ -746,31 +775,74 @@ export function SyllabusTab({ bubble, isFounder, isAuthor = true, userJoined = t
       submissionTypes: ['link'],
       sections: SEED_SECTIONS.map((s, i) => ({ ...s, id: `${newId}-s${i}` })),
     };
-    setSessions(ss => [...ss, newSession]);
-    setEditingId(newId);
+    try {
+      const { id, sectionIds } = await api.createSessionWithPlan(bubble.id, draft);
+      const saved = withSectionIds({ ...draft, id }, sectionIds);
+      setSessions(ss => [...ss, saved]);
+      setEditingId(id);
+    } catch {
+      toast.error('Could not add a session — please try again.');
+    }
   }
 
   function saveEdit(id: string, updates: Partial<Session>) {
-    setSessions(ss => ss.map(s => s.id === id ? { ...s, ...updates } : s));
+    const orig = sessions.find(s => s.id === id);
+    if (!orig) return;
+    const next = { ...orig, ...updates };
+    setSessions(ss => ss.map(s => s.id === id ? next : s));
     setEditingId(null);
+    api.saveSession(id, next)
+      .then(ids => setSessions(ss => ss.map(s => s.id === id ? withSectionIds(s, ids) : s)))
+      .catch(err => {
+        setSessions(ss => ss.map(s => s.id === id ? orig : s));
+        toast.error(api.errorMessage(err, 'Could not save your changes — they were reverted.'));
+      });
   }
 
-  function duplicate(id: string) {
+  async function duplicate(id: string) {
     const idx = sessions.findIndex(s => s.id === id);
     if (idx === -1) return;
     const orig = sessions[idx];
-    const copy: Session = { ...orig, id: `s-copy-${Date.now()}`, title: `${orig.title} (Copy)`, status: 'draft' };
-    setSessions(ss => { const next = [...ss]; next.splice(idx + 1, 0, copy); return reflowNumbers(next); });
-    toast('Session duplicated.');
+    const copy: Session = { ...orig, number: idx + 2, title: `${orig.title} (Copy)`, status: 'draft' };
+    try {
+      const { id: newId, sectionIds } = await api.createSessionWithPlan(bubble.id, copy);
+      const saved = withSectionIds({ ...copy, id: newId }, sectionIds);
+      setSessions(ss => {
+        const next = [...ss];
+        next.splice(idx + 1, 0, saved);
+        const reflowed = reflowNumbers(next);
+        persistOrder(reflowed);
+        return reflowed;
+      });
+      toast('Session duplicated.');
+    } catch {
+      toast.error('Could not duplicate — please try again.');
+    }
   }
 
   function moveUp(id: string) {
-    setSessions(ss => { const idx = ss.findIndex(s => s.id === id); if (idx <= 0) return ss; const next = [...ss]; [next[idx - 1], next[idx]] = [next[idx], next[idx - 1]]; return reflowNumbers(next); });
+    setSessions(ss => {
+      const idx = ss.findIndex(s => s.id === id);
+      if (idx <= 0) return ss;
+      const next = [...ss];
+      [next[idx - 1], next[idx]] = [next[idx], next[idx - 1]];
+      const reflowed = reflowNumbers(next);
+      persistOrder(reflowed);
+      return reflowed;
+    });
     setOpenMenuId(null);
   }
 
   function moveDown(id: string) {
-    setSessions(ss => { const idx = ss.findIndex(s => s.id === id); if (idx >= ss.length - 1) return ss; const next = [...ss]; [next[idx], next[idx + 1]] = [next[idx + 1], next[idx]]; return reflowNumbers(next); });
+    setSessions(ss => {
+      const idx = ss.findIndex(s => s.id === id);
+      if (idx >= ss.length - 1) return ss;
+      const next = [...ss];
+      [next[idx], next[idx + 1]] = [next[idx + 1], next[idx]];
+      const reflowed = reflowNumbers(next);
+      persistOrder(reflowed);
+      return reflowed;
+    });
     setOpenMenuId(null);
   }
 
@@ -784,11 +856,18 @@ export function SyllabusTab({ bubble, isFounder, isAuthor = true, userJoined = t
   function confirmDelete() {
     if (!deleteTarget) return;
     const { session: removed, index: origIdx } = deleteTarget;
-    setSessions(ss => ss.filter(s => s.id !== removed.id));
+    setSessions(ss => {
+      const reflowed = reflowNumbers(ss.filter(s => s.id !== removed.id));
+      persistOrder(reflowed);
+      return reflowed;
+    });
     setDeleteTarget(null);
 
+    // Soft-delete on the server immediately; Undo restores it.
+    api.softDeleteSession(removed.id)
+      .catch(() => toast.error('Could not delete this session'));
+
     let undone = false;
-    const timerId = setTimeout(() => { /* soft-deleted */ }, 5000);
     toast('Session deleted.', {
       duration: 5000,
       action: {
@@ -796,8 +875,17 @@ export function SyllabusTab({ bubble, isFounder, isAuthor = true, userJoined = t
         onClick: () => {
           if (undone) return;
           undone = true;
-          clearTimeout(timerId);
-          setSessions(ss => { const next = [...ss]; next.splice(Math.min(origIdx, next.length), 0, removed); return reflowNumbers(next); });
+          api.restoreSession(removed.id)
+            .then(() => {
+              setSessions(ss => {
+                const next = [...ss];
+                next.splice(Math.min(origIdx, next.length), 0, removed);
+                const reflowed = reflowNumbers(next);
+                persistOrder(reflowed);
+                return reflowed;
+              });
+            })
+            .catch(() => toast.error('Could not restore the session'));
         },
       },
     });
@@ -832,7 +920,20 @@ export function SyllabusTab({ bubble, isFounder, isAuthor = true, userJoined = t
       </div>}
 
       {/* Sessions header */}
-      <h3 className="text-[16px] font-bold text-[#212529]" style={{ fontFamily: 'var(--font-display)' }}>Sessions</h3>
+      <div className="flex items-center justify-between gap-3">
+        <h3 className="text-[16px] font-bold text-[#212529]" style={{ fontFamily: 'var(--font-display)' }}>Sessions</h3>
+        {isFounder && (
+          <button
+            onClick={() => setShowImport(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#E9ECEF] text-[#495057] text-[13px] font-medium hover:border-[#00a79d] hover:text-[#00a79d] transition-colors"
+            style={{ fontFamily: 'var(--font-body)' }}
+          >
+            <Upload className="size-3.5" strokeWidth={1.75} /> Import
+          </button>
+        )}
+      </div>
+
+      {showImport && <ImportSyllabusModal bubble={bubble} onClose={() => setShowImport(false)} />}
 
       {/* Session list */}
       <div className="flex flex-col gap-3">
@@ -845,7 +946,7 @@ export function SyllabusTab({ bubble, isFounder, isAuthor = true, userJoined = t
             isMenuOpen={openMenuId === session.id}
             isEditing={editingId === session.id}
             isAuthor={isAuthor}
-            memberIds={bubble.memberIds}
+            members={bubble.members ?? []}
             onOpenMenu={() => setOpenMenuId(session.id)}
             onCloseMenu={() => setOpenMenuId(null)}
             onStartEdit={() => { setEditingId(session.id); setOpenMenuId(null); }}
@@ -860,7 +961,13 @@ export function SyllabusTab({ bubble, isFounder, isAuthor = true, userJoined = t
 
         {sessions.length === 0 && (
           <div className="text-center py-12 text-[#6C757D]" style={{ fontFamily: 'var(--font-body)' }}>
-            {isFounder ? 'Click "Add Session" below to build your course guide.' : 'Sessions coming soon.'}
+            {!isLoggedIn
+              ? 'Sign in to preview the full course guide.'
+              : !bubble.detailLoaded
+                ? 'Loading course guide…'
+                : isFounder
+                  ? 'Click "Add Session" below to build your course guide.'
+                  : 'Sessions coming soon.'}
           </div>
         )}
 
