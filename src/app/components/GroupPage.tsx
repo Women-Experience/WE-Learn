@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router";
 import { toast } from "sonner";
-import { BookOpen, Users, FolderOpen, Share2, ArrowRight, Crown, Calendar, Clock, Info, X, ChevronLeft, Search, MoreVertical, Pencil, Trash2, Copy, Eye, EyeOff, Check } from "lucide-react";
+import { BookOpen, Users, FolderOpen, Share2, ArrowRight, Crown, Calendar, Clock, Info, X, ChevronLeft, Search, MoreVertical, Pencil, Trash2, Copy, Eye, EyeOff, Check, MessageCircle } from "lucide-react";
 import { useApp } from "../../context/AppContext";
 import { getBubbleById, getBubbleMembers } from "../../data/mock";
 import { SyllabusTab } from "./SyllabusTab";
@@ -21,16 +21,21 @@ function WELogo({ className = "h-7 w-auto" }: { className?: string }) {
 
 // ─── Avatar Stack (small) ─────────────────────────────────────────────────────
 
-function AvatarStackSmall({ avatars }: { avatars: string[] }) {
+function AvatarStackSmall({ avatars, onClick }: { avatars: string[]; onClick?: () => void }) {
   return (
-    <div className="relative flex" style={{ width: Math.min(avatars.length, 5) * 12 + 10, height: 24 }}>
+    <button
+      onClick={onClick}
+      className={`relative flex ${onClick ? 'cursor-pointer hover:opacity-80 transition-opacity' : 'cursor-default'}`}
+      style={{ width: Math.min(avatars.length, 5) * 12 + 10, height: 24 }}
+      tabIndex={onClick ? 0 : -1}
+    >
       {avatars.slice(0, 5).map((src, i) => (
         <div key={i} className="absolute rounded-full size-6 border-2 border-white overflow-hidden"
           style={{ left: i * 12, zIndex: i }}>
           <img src={src} alt="" className="size-full object-cover" />
         </div>
       ))}
-    </div>
+    </button>
   );
 }
 
@@ -57,6 +62,7 @@ export function GroupPage() {
   const [editDescription, setEditDescription] = useState('');
   const [editScheduleDay, setEditScheduleDay] = useState('');
   const [editScheduleTime, setEditScheduleTime] = useState('');
+  const [editWhatsappLink, setEditWhatsappLink] = useState('');
   const bubbleMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -232,6 +238,19 @@ export function GroupPage() {
                       />
                     </div>
                   </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[11px] text-[#ADB5BD] font-medium" style={{ fontFamily: 'var(--font-body)' }}>
+                      WhatsApp group link <span className="font-normal">(optional — shown to members after joining)</span>
+                    </label>
+                    <input
+                      type="url"
+                      value={editWhatsappLink}
+                      onChange={e => setEditWhatsappLink(e.target.value)}
+                      placeholder="https://chat.whatsapp.com/..."
+                      className="text-[13px] px-2 py-1.5 rounded-lg border border-[#00a79d] focus:outline-none bg-[#F8F9FA]"
+                      style={{ fontFamily: 'var(--font-body)' }}
+                    />
+                  </div>
                 </div>
               ) : (
                 <>
@@ -253,9 +272,10 @@ export function GroupPage() {
                 </span>
                 <span className="flex items-center gap-1.5">
                   <Users className="size-4 text-[#6C757D] shrink-0" strokeWidth={1.5} />
-                  {bubble.takenSeats} of {bubble.maxSeats} seats
-                  {bubble.takenSeats >= bubble.maxSeats && (
-                    <span className="ml-1 text-[11px] font-semibold px-1.5 py-0.5 rounded-full bg-[#FEE2E2] text-[#B91C1C]">Full</span>
+                  {bubble.takenSeats >= bubble.maxSeats ? (
+                    <span className="text-[11px] font-semibold px-1.5 py-0.5 rounded-full bg-[#FEE2E2] text-[#B91C1C]">Full</span>
+                  ) : (
+                    <>{bubble.maxSeats - bubble.takenSeats} {bubble.maxSeats - bubble.takenSeats === 1 ? 'seat' : 'seats'} left</>
                   )}
                 </span>
                 <span className="flex items-center gap-1.5">
@@ -266,11 +286,15 @@ export function GroupPage() {
 
               {/* Avatar stack — below description */}
               <div className="flex items-center gap-2 mt-3">
-                <AvatarStackSmall avatars={members.map(m => m.avatar)} />
+                <AvatarStackSmall avatars={members.map(m => m.avatar)} onClick={() => setActiveTab('members')} />
                 {members.length > 0 && (
-                  <span className="text-[12px] text-[#6C757D]" style={{ fontFamily: 'var(--font-body)' }}>
+                  <button
+                    onClick={() => setActiveTab('members')}
+                    className="text-[12px] text-[#6C757D] hover:text-[#00a79d] hover:underline transition-colors"
+                    style={{ fontFamily: 'var(--font-body)' }}
+                  >
                     {members.length} {members.length === 1 ? 'member' : 'members'}
-                  </span>
+                  </button>
                 )}
               </div>
             </div>
@@ -309,6 +333,7 @@ export function GroupPage() {
                             setEditDescription(bubble.description);
                             setEditScheduleDay(bubble.scheduleDay);
                             setEditScheduleTime(bubble.scheduleTime);
+                            setEditWhatsappLink(bubble.whatsappLink ?? '');
                             setEditingBubble(true);
                             setBubbleMenuOpen(false);
                           }}
@@ -354,7 +379,13 @@ export function GroupPage() {
                 <div className="flex items-center gap-1.5 text-[12px] text-[#6C757D]"
                   style={{ fontFamily: 'var(--font-body)' }}>
                   <img src={founder.avatar} alt={founder.name} className="size-5 rounded-full object-cover" />
-                  <span className="hidden sm:inline">Founded by </span><strong className="text-[#495057]">{founder.name}</strong>
+                  <span className="hidden sm:inline">Led by </span>
+                  <button
+                    onClick={() => setActiveTab('members')}
+                    className="font-semibold text-[#495057] hover:text-[#00a79d] hover:underline transition-colors"
+                  >
+                    {founder.name}
+                  </button>
                 </div>
               )}
             </div>
@@ -375,6 +406,7 @@ export function GroupPage() {
                     description: editDescription.trim() || bubble.description,
                     scheduleDay: editScheduleDay || bubble.scheduleDay,
                     scheduleTime: editScheduleTime.trim() || bubble.scheduleTime,
+                    whatsappLink: editWhatsappLink.trim() || undefined,
                   });
                   setEditingBubble(false);
                   toast.success('Bubble updated');
@@ -385,9 +417,14 @@ export function GroupPage() {
             </div>
           ) : !isUserFounder && !userJoined ? (
             <div className="mt-4 pt-4 border-t border-[#F1F3F5] flex items-center justify-between gap-3 flex-wrap">
-              <p className="text-[13px] text-[#6C757D]" style={{ fontFamily: 'var(--font-body)' }}>
-                Like what you see? Join this Bubble to participate in sessions and connect with members.
-              </p>
+              <div style={{ fontFamily: 'var(--font-body)' }}>
+                <p className="text-[13px] text-[#6C757D]">
+                  Like what you see? Join to access sessions, resources, and the group chat.
+                </p>
+                <p className="text-[12px] text-[#ADB5BD] mt-0.5">
+                  Start by clicking <strong className="text-[#495057]">Join Bubble</strong> — it takes under a minute.
+                </p>
+              </div>
               <button
                 onClick={handleJoinClick}
                 className="flex items-center gap-1.5 shrink-0 min-h-[44px] px-5 py-2.5 rounded-xl bg-[#00a79d] text-white text-[14px] font-semibold hover:bg-[#008f86] transition-colors"
@@ -404,7 +441,18 @@ export function GroupPage() {
               </span>
             </div>
           ) : userJoined ? (
-            <div className="mt-4 pt-4 border-t border-[#F1F3F5] flex justify-end">
+            <div className="mt-4 pt-4 border-t border-[#F1F3F5] flex items-center justify-between gap-3 flex-wrap">
+              {bubble.whatsappLink ? (
+                <a
+                  href={bubble.whatsappLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-[#25D366] text-[#128C7E] text-[13px] font-semibold hover:bg-[#F0FFF4] transition-colors"
+                  style={{ fontFamily: 'var(--font-body)' }}
+                >
+                  <MessageCircle className="size-4" strokeWidth={1.75} /> Open WhatsApp group
+                </a>
+              ) : <span />}
               <button
                 disabled
                 className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl border border-[#7ECFCA] bg-[#E5F5F4] text-[#008f86] text-[14px] font-semibold cursor-default select-none"
@@ -451,6 +499,7 @@ export function GroupPage() {
           <SyllabusTab
             bubble={bubble}
             isFounder={isUserFounder}
+            userJoined={userJoined || isUserFounder}
           />
         )}
         {activeTab === 'members'   && <MembersTab   bubble={bubble} isFounder={isUserFounder} onJoin={handleJoinClick} />}

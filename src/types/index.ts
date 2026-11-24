@@ -39,6 +39,7 @@ export interface Bubble {
   sessions: Session[];
   resources: Resource[];
   heroImage?: string;
+  whatsappLink?: string;
 }
 
 // ─── Session ──────────────────────────────────────────────────────────────────

@@ -728,9 +728,10 @@ interface Props {
   bubble: Bubble;
   isFounder: boolean;
   isAuthor?: boolean;
+  userJoined?: boolean;
 }
 
-export function SyllabusTab({ bubble, isFounder, isAuthor = true }: Props) {
+export function SyllabusTab({ bubble, isFounder, isAuthor = true, userJoined = true }: Props) {
   const [sessions, setSessions] = useState<Session[]>(bubble.sessions);
   const [openMenuId, setOpenMenuId]   = useState<string | null>(null);
   const [editingId, setEditingId]     = useState<string | null>(() => {
@@ -825,8 +826,8 @@ export function SyllabusTab({ bubble, isFounder, isAuthor = true }: Props) {
   return (
     <div className="flex flex-col gap-5">
 
-      {/* Top Banner */}
-      <div className="rounded-2xl px-5 pt-5 pb-4 text-white" style={{ background: 'linear-gradient(135deg, #00a79d 0%, #008f86 100%)' }}>
+      {/* Top Banner — only shown to members/founder */}
+      {userJoined && <div className="rounded-2xl px-5 pt-5 pb-4 text-white" style={{ background: 'linear-gradient(135deg, #00a79d 0%, #008f86 100%)' }}>
         <div className="flex items-end gap-4">
           <div className="flex-1">
             <div className="flex items-baseline justify-between mb-2">
@@ -848,7 +849,7 @@ export function SyllabusTab({ bubble, isFounder, isAuthor = true }: Props) {
             </div>
           </div>
         </div>
-      </div>
+      </div>}
 
       {/* Sessions header */}
       <h3 className="text-[16px] font-bold text-[#212529]" style={{ fontFamily: 'var(--font-display)' }}>Sessions</h3>
