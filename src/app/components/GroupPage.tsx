@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router";
 import { toast } from "sonner";
-import { BookOpen, Users, FolderOpen, Share2, ArrowRight, Crown, Calendar, Clock, Info, X, ChevronLeft, Search, MoreVertical, Pencil, Trash2, Copy, Eye, EyeOff, Check, MessageCircle } from "lucide-react";
+import { BookOpen, Users, FolderOpen, Share2, ArrowRight, Crown, Calendar, Clock, Info, X, ChevronLeft, Search, MoreVertical, Pencil, Trash2, Copy, Eye, EyeOff, Check, MessageCircle, LogOut, RefreshCw } from "lucide-react";
 import { useApp } from "../../context/AppContext";
 import { getBubbleById, getBubbleMembers } from "../../data/mock";
 import { SyllabusTab } from "./SyllabusTab";
@@ -48,7 +48,7 @@ function AvatarStackSmall({ avatars, onClick }: { avatars: string[]; onClick?: (
 export function GroupPage() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
-  const { bubbles, currentUser, isFounder, isJoined, isLoggedIn, addRecentBubble, updateBubble, deleteBubble, addBubble } = useApp();
+  const { bubbles, currentUser, isFounder, isJoined, isLoggedIn, addRecentBubble, updateBubble, deleteBubble, addBubble, leaveBubble } = useApp();
 
   const [activeTab, setActiveTab]       = useState<Tab>('syllabus');
   const [guestPreview, setGuestPreview] = useState(false);
@@ -63,6 +63,9 @@ export function GroupPage() {
   const [editScheduleDay, setEditScheduleDay] = useState('');
   const [editScheduleTime, setEditScheduleTime] = useState('');
   const [editWhatsappLink, setEditWhatsappLink] = useState('');
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
+  const [showTransfer, setShowTransfer] = useState(false);
+  const [transferToId, setTransferToId] = useState('');
   const bubbleMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -315,8 +318,8 @@ export function GroupPage() {
                   <Share2 className="size-4" strokeWidth={1.75} />
                   <span className="hidden sm:inline">Share</span>
                 </button>
-                {/* ⋮ menu — founder only */}
-                {isUserFounder && (
+                {/* ⋮ menu — founder + joined members */}
+                {(isUserFounder || (userJoined && !isUserFounder)) && (
                   <div ref={bubbleMenuRef} className="relative">
                     <button
                       onClick={() => setBubbleMenuOpen(v => !v)}
@@ -325,51 +328,73 @@ export function GroupPage() {
                       <MoreVertical className="size-4" strokeWidth={1.75} />
                     </button>
                     {bubbleMenuOpen && (
-                      <div className="absolute right-0 top-full mt-1 w-52 bg-white rounded-xl border border-[#E9ECEF] overflow-hidden z-30"
+                      <div className="absolute right-0 top-full mt-1 w-56 bg-white rounded-xl border border-[#E9ECEF] overflow-hidden z-30"
                         style={{ boxShadow: '0 8px 32px rgba(0,0,0,0.12)' }}>
-                        <button
-                          onClick={() => {
-                            setEditTitle(bubble.title);
-                            setEditDescription(bubble.description);
-                            setEditScheduleDay(bubble.scheduleDay);
-                            setEditScheduleTime(bubble.scheduleTime);
-                            setEditWhatsappLink(bubble.whatsappLink ?? '');
-                            setEditingBubble(true);
-                            setBubbleMenuOpen(false);
-                          }}
-                          className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-[13px] text-[#212529] hover:bg-[#F8F9FA] transition-colors text-left"
-                          style={{ fontFamily: 'var(--font-body)' }}
-                        >
-                          <Pencil className="size-4 shrink-0" strokeWidth={1.75} /> Edit info
-                        </button>
-                        <button
-                          onClick={() => {
-                            const newBubble: Bubble = {
-                              ...bubble,
-                              id: `bubble-${Date.now()}`,
-                              title: `${bubble.title} (copy)`,
-                              founderId: currentUser!.id,
-                              memberIds: [currentUser!.id],
-                              takenSeats: 1,
-                              status: 'open',
-                            };
-                            addBubble(newBubble);
-                            setBubbleMenuOpen(false);
-                            toast.success('Bubble duplicated');
-                          }}
-                          className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-[13px] text-[#212529] hover:bg-[#F8F9FA] transition-colors text-left"
-                          style={{ fontFamily: 'var(--font-body)' }}
-                        >
-                          <Copy className="size-4 shrink-0" strokeWidth={1.75} /> Duplicate
-                        </button>
-                        <div className="h-px bg-[#E9ECEF] mx-3" />
-                        <button
-                          onClick={() => { setShowDeleteConfirm(true); setBubbleMenuOpen(false); }}
-                          className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-[13px] text-[#FA5252] hover:bg-[#FFF5F5] transition-colors text-left"
-                          style={{ fontFamily: 'var(--font-body)' }}
-                        >
-                          <Trash2 className="size-4 shrink-0" strokeWidth={1.75} /> Delete bubble
-                        </button>
+                        {isUserFounder && (<>
+                          <button
+                            onClick={() => {
+                              setEditTitle(bubble.title);
+                              setEditDescription(bubble.description);
+                              setEditScheduleDay(bubble.scheduleDay);
+                              setEditScheduleTime(bubble.scheduleTime);
+                              setEditWhatsappLink(bubble.whatsappLink ?? '');
+                              setEditingBubble(true);
+                              setBubbleMenuOpen(false);
+                            }}
+                            className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-[13px] text-[#212529] hover:bg-[#F8F9FA] transition-colors text-left"
+                            style={{ fontFamily: 'var(--font-body)' }}
+                          >
+                            <Pencil className="size-4 shrink-0" strokeWidth={1.75} /> Edit info
+                          </button>
+                          <button
+                            onClick={() => {
+                              const newBubble: Bubble = {
+                                ...bubble,
+                                id: `bubble-${Date.now()}`,
+                                title: `${bubble.title} (copy)`,
+                                founderId: currentUser!.id,
+                                memberIds: [currentUser!.id],
+                                takenSeats: 1,
+                                status: 'open',
+                              };
+                              addBubble(newBubble);
+                              setBubbleMenuOpen(false);
+                              toast.success('Bubble duplicated');
+                            }}
+                            className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-[13px] text-[#212529] hover:bg-[#F8F9FA] transition-colors text-left"
+                            style={{ fontFamily: 'var(--font-body)' }}
+                          >
+                            <Copy className="size-4 shrink-0" strokeWidth={1.75} /> Duplicate
+                          </button>
+                          <button
+                            onClick={() => {
+                              setTransferToId('');
+                              setShowTransfer(true);
+                              setBubbleMenuOpen(false);
+                            }}
+                            className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-[13px] text-[#212529] hover:bg-[#F8F9FA] transition-colors text-left"
+                            style={{ fontFamily: 'var(--font-body)' }}
+                          >
+                            <RefreshCw className="size-4 shrink-0" strokeWidth={1.75} /> Transfer ownership
+                          </button>
+                          <div className="h-px bg-[#E9ECEF] mx-3" />
+                          <button
+                            onClick={() => { setShowDeleteConfirm(true); setBubbleMenuOpen(false); }}
+                            className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-[13px] text-[#FA5252] hover:bg-[#FFF5F5] transition-colors text-left"
+                            style={{ fontFamily: 'var(--font-body)' }}
+                          >
+                            <Trash2 className="size-4 shrink-0" strokeWidth={1.75} /> Delete bubble
+                          </button>
+                        </>)}
+                        {!isUserFounder && userJoined && (
+                          <button
+                            onClick={() => { setShowLeaveConfirm(true); setBubbleMenuOpen(false); }}
+                            className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-[13px] text-[#FA5252] hover:bg-[#FFF5F5] transition-colors text-left"
+                            style={{ fontFamily: 'var(--font-body)' }}
+                          >
+                            <LogOut className="size-4 shrink-0" strokeWidth={1.75} /> Leave Bubble
+                          </button>
+                        )}
                       </div>
                     )}
                   </div>
@@ -563,6 +588,111 @@ export function GroupPage() {
           </div>
         </div>
       )}
+
+      {/* ── Leave Bubble Confirmation ── */}
+      {showLeaveConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowLeaveConfirm(false)} />
+          <div className="relative bg-white rounded-2xl w-full max-w-sm overflow-hidden"
+            style={{ boxShadow: '0 24px 64px rgba(0,0,0,0.18)' }}>
+            <div className="px-6 pt-6 pb-5">
+              <div className="size-12 bg-[#FFF5F5] rounded-2xl flex items-center justify-center mb-4">
+                <LogOut className="size-6 text-[#FA5252]" strokeWidth={1.75} />
+              </div>
+              <h3 className="font-bold text-[17px] text-[#212529] mb-1" style={{ fontFamily: 'var(--font-display)' }}>
+                Leave this Bubble?
+              </h3>
+              <p className="text-[14px] text-[#6C757D] mb-5" style={{ fontFamily: 'var(--font-body)' }}>
+                You'll lose access to sessions and resources. Your seat will open up for someone else.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowLeaveConfirm(false)}
+                  className="flex-1 py-2.5 rounded-xl border border-[#E9ECEF] text-[14px] text-[#6C757D] hover:bg-[#F8F9FA] transition-colors"
+                  style={{ fontFamily: 'var(--font-body)' }}
+                >Cancel</button>
+                <button
+                  onClick={() => {
+                    leaveBubble(bubble.id);
+                    setShowLeaveConfirm(false);
+                    setHasJoined(false);
+                    toast.success('Left the Bubble');
+                  }}
+                  className="flex-1 py-2.5 rounded-xl bg-[#FA5252] text-white text-[14px] font-semibold hover:bg-[#E03131] transition-colors"
+                  style={{ fontFamily: 'var(--font-body)' }}
+                >Leave</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Transfer Ownership Modal ── */}
+      {showTransfer && (() => {
+        const otherMembers = members.filter(m => m.id !== bubble.founderId);
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowTransfer(false)} />
+            <div className="relative bg-white rounded-2xl w-full max-w-sm overflow-hidden"
+              style={{ boxShadow: '0 24px 64px rgba(0,0,0,0.18)' }}>
+              <div className="px-6 pt-6 pb-5">
+                <div className="size-12 bg-[#E5F5F4] rounded-2xl flex items-center justify-center mb-4">
+                  <RefreshCw className="size-6 text-[#00a79d]" strokeWidth={1.75} />
+                </div>
+                <h3 className="font-bold text-[17px] text-[#212529] mb-1" style={{ fontFamily: 'var(--font-display)' }}>
+                  Transfer ownership
+                </h3>
+                <p className="text-[14px] text-[#6C757D] mb-4" style={{ fontFamily: 'var(--font-body)' }}>
+                  Pick a member to become the new founder. You'll stay as a regular member.
+                </p>
+                {otherMembers.length === 0 ? (
+                  <p className="text-[13px] text-[#ADB5BD] text-center py-3" style={{ fontFamily: 'var(--font-body)' }}>
+                    No other members yet — invite someone first.
+                  </p>
+                ) : (
+                  <div className="flex flex-col gap-2 mb-5 max-h-52 overflow-y-auto">
+                    {otherMembers.map(m => (
+                      <button
+                        key={m.id}
+                        onClick={() => setTransferToId(m.id)}
+                        className={`flex items-center gap-3 px-3 py-2.5 rounded-xl border transition-colors text-left ${
+                          transferToId === m.id
+                            ? 'border-[#00a79d] bg-[#E5F5F4]'
+                            : 'border-[#E9ECEF] hover:border-[#00a79d]'
+                        }`}
+                      >
+                        <img src={m.avatar} alt={m.name} className="size-8 rounded-full object-cover shrink-0" />
+                        <div className="min-w-0">
+                          <p className="text-[13px] font-semibold text-[#212529] truncate" style={{ fontFamily: 'var(--font-body)' }}>{m.name}</p>
+                          <p className="text-[11px] text-[#6C757D] truncate" style={{ fontFamily: 'var(--font-body)' }}>{m.title}</p>
+                        </div>
+                        {transferToId === m.id && <Check className="size-4 text-[#00a79d] shrink-0 ml-auto" strokeWidth={2.5} />}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setShowTransfer(false)}
+                    className="flex-1 py-2.5 rounded-xl border border-[#E9ECEF] text-[14px] text-[#6C757D] hover:bg-[#F8F9FA] transition-colors"
+                    style={{ fontFamily: 'var(--font-body)' }}
+                  >Cancel</button>
+                  <button
+                    disabled={!transferToId}
+                    onClick={() => {
+                      updateBubble(bubble.id, { founderId: transferToId });
+                      setShowTransfer(false);
+                      toast.success('Ownership transferred');
+                    }}
+                    className="flex-1 py-2.5 rounded-xl bg-[#00a79d] text-white text-[14px] font-semibold hover:bg-[#008f86] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                    style={{ fontFamily: 'var(--font-body)' }}
+                  >Transfer</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
     </div>
   );
