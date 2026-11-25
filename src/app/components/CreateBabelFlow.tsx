@@ -485,9 +485,16 @@ export function CreateBabelFlow() {
   const [createdBubble, setCreatedBubble] = useState<{ id: string; title: string; sessionCount: number } | null>(null);
   const [showTransition, setShowTransition] = useState(false);
   const activeWidgetRef = useRef<HTMLDivElement>(null);
+  const scrollerRef = useRef<HTMLDivElement>(null);
+  const stripRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    activeWidgetRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const el = activeWidgetRef.current;
+    const scroller = scrollerRef.current;
+    if (!el || !scroller) return;
+    const offset = (stripRef.current?.offsetHeight ?? 0) + 12;
+    const top = el.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop;
+    scroller.scrollTo({ top: Math.max(0, top - offset), behavior: 'smooth' });
   }, [feed, phase]);
 
   function advanceTo(nextStep: StepKey | null, summary: string, newData: Partial<BubbleData>) {
@@ -640,7 +647,7 @@ export function CreateBabelFlow() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F8F9FA] flex flex-col">
+    <div className="h-screen overflow-hidden bg-[#F8F9FA] flex flex-col">
 
       {/* Header */}
       <header className="bg-white border-b border-[#E9ECEF] sticky top-0 z-20">
@@ -698,11 +705,11 @@ export function CreateBabelFlow() {
 
       {/* Feed */}
       {phase === 'wizard' && (
-        <div className="flex-1 max-w-xl mx-auto w-full overflow-y-auto flex flex-col">
+        <div ref={scrollerRef} className="flex-1 max-w-xl mx-auto w-full overflow-y-auto flex flex-col">
 
           {/* ── Sticky completed-steps strip ── */}
           {feed.some(i => i.kind === 'widget' && i.locked) && (
-            <div className="sticky top-0 z-10 bg-[#F8F9FA] px-4 pt-3 pb-2 flex flex-col gap-1.5">
+            <div ref={stripRef} className="sticky top-0 z-10 shrink-0 bg-[#F8F9FA] px-4 pt-3 pb-2 flex flex-col gap-1.5 max-h-[38vh] overflow-y-auto">
               {feed.filter(i => i.kind === 'widget' && i.locked).map(item => (
                 <div key={item.id}
                   className="flex items-center justify-between gap-3 px-4 py-2.5 bg-white rounded-2xl border border-[#E9ECEF]"

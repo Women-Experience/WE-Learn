@@ -300,7 +300,6 @@ function SessionCard({
 
   const cfg = STATUS_CFG[session.status];
   const sNum = `S${String(session.number).padStart(2, '0')}`;
-  const getMemberById = (id: string) => members.find(m => m.id === id);
   const totalMinutes = session.sections.reduce((sum, s) => sum + s.minutes, 0);
   // Group progress on this session: which current Members marked it done.
   const finishedBy = doneMembers(session, members);
@@ -413,22 +412,6 @@ function SessionCard({
             </p>
           </div>
 
-          {/* Led by + meta */}
-          <div className="flex flex-wrap items-center gap-2">
-            {(() => {
-              const member = getMemberById(session.ledBy);
-              return member ? (
-                <div className="flex items-center gap-1.5">
-                  {member.avatar
-                    ? <img src={member.avatar} alt={member.name} className="size-5 rounded-full object-cover" />
-                    : <span className="size-5 rounded-full bg-[#E5F5F4] flex items-center justify-center text-[10px] font-bold text-[#008f86]">{member.name.charAt(0).toUpperCase()}</span>}
-                  <span className="text-[12px] text-[#495057]" style={{ fontFamily: 'var(--font-body)' }}>
-                    Led by <strong>{member.name}</strong>
-                  </span>
-                </div>
-              ) : null;
-            })()}
-          </div>
 
           {/* Pre-materials */}
           {session.preMaterials && (
